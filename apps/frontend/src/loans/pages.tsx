@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { requestMessage } from '../lib/api';
 import {
   borrowCopy,
@@ -260,7 +260,9 @@ export function BorrowPage({ token, go, notify }: Props): JSX.Element {
   const [copy, setCopy] = useState<CopyEligibility | null>(null);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [created, setCreated] = useState<Loan | null>(null);
+  const copyLookupRef = useRef<Promise<void> | null>(null);
   const findMembers = async () => {
     try {
       setMembers(await lookupMembers(memberQuery, token));
@@ -268,11 +270,20 @@ export function BorrowPage({ token, go, notify }: Props): JSX.Element {
       setError(requestMessage(e));
     }
   };
-  const findCopies = async () => {
+  const findCopies = async (value = copyValue) => {
+    if (copyLookupRef.current) return copyLookupRef.current;
+    const request = (async () => {
+      try {
+        setCopies((await lookupCopies(value, token)).items);
+      } catch (e) {
+        setError(requestMessage(e));
+      }
+    })();
+    copyLookupRef.current = request;
     try {
-      setCopies((await lookupCopies(copyValue, token)).items);
-    } catch (e) {
-      setError(requestMessage(e));
+      await request;
+    } finally {
+      if (copyLookupRef.current === request) copyLookupRef.current = null;
     }
   };
   const eligibleCopy =
@@ -284,6 +295,7 @@ export function BorrowPage({ token, go, notify }: Props): JSX.Element {
     try {
       const loan = await borrowCopy({ memberId: member.id, bookCopyId: copy.id }, token);
       setCreated(loan);
+      setConfirming(false);
       notify('Loan created successfully.');
     } catch (e) {
       setError(requestMessage(e));
@@ -367,9 +379,7 @@ export function BorrowPage({ token, go, notify }: Props): JSX.Element {
           <ScanButton
             onValue={(value) => {
               setCopyValue(value);
-              void lookupCopies(value, token)
-                .then((r) => setCopies(r.items))
-                .catch((e: unknown) => setError(requestMessage(e)));
+              void findCopies(value);
             }}
             onError={setError}
           />
@@ -412,12 +422,46 @@ export function BorrowPage({ token, go, notify }: Props): JSX.Element {
         <button
           className="button primary"
           disabled={!member?.eligible || !eligibleCopy || saving}
-          onClick={() => void submit()}
+          onClick={() => setConfirming(true)}
         >
-          {saving ? 'Borrowing…' : 'Confirm borrow'}
+          Review borrow
         </button>
         {created && <p className="notice">Created loan due {date(created.dueAt)}.</p>}
       </div>
+      {confirming && member && copy && eligibleCopy && (
+        <div className="modal-backdrop">
+          <div
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="borrow-confirmation-title"
+          >
+            <h2 id="borrow-confirmation-title">Confirm book borrowing</h2>
+            <p>
+              {member.fullName} · {copy.book.title} · {copy.copyCode}
+            </p>
+            <p>The server will apply the 14-day loan policy.</p>
+            <div className="form-actions">
+              <button
+                className="button quiet"
+                type="button"
+                disabled={saving}
+                onClick={() => setConfirming(false)}
+              >
+                Cancel borrow
+              </button>
+              <button
+                className="button primary"
+                type="button"
+                disabled={saving}
+                onClick={() => void submit()}
+              >
+                {saving ? 'Borrowing…' : 'Confirm borrow'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
@@ -432,6 +476,7 @@ export function ReturnsPage({ token, go, notify }: Props): JSX.Element {
   const [saving, setSaving] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [result, setResult] = useState<Loan | null>(null);
+  const loanLookupRef = useRef<Promise<void> | null>(null);
   useEffect(() => {
     const id = new URLSearchParams(window.location.search).get('loan');
     if (id)
@@ -439,12 +484,21 @@ export function ReturnsPage({ token, go, notify }: Props): JSX.Element {
         .then(setSelected)
         .catch((e: unknown) => setError(requestMessage(e)));
   }, [token]);
-  const find = async () => {
+  const find = async (value = q) => {
+    if (loanLookupRef.current) return loanLookupRef.current;
+    const request = (async () => {
+      try {
+        const data = await listLoans({ q: value, page: 1, limit: 10 }, token);
+        setLoans(data.items.filter((loan) => loan.status !== 'RETURNED'));
+      } catch (e) {
+        setError(requestMessage(e));
+      }
+    })();
+    loanLookupRef.current = request;
     try {
-      const data = await listLoans({ q, page: 1, limit: 10 }, token);
-      setLoans(data.items.filter((loan) => loan.status !== 'RETURNED'));
-    } catch (e) {
-      setError(requestMessage(e));
+      await request;
+    } finally {
+      if (loanLookupRef.current === request) loanLookupRef.current = null;
     }
   };
   const submit = async () => {
@@ -501,9 +555,7 @@ export function ReturnsPage({ token, go, notify }: Props): JSX.Element {
       <ScanButton
         onValue={(value) => {
           setQ(value);
-          void listLoans({ q: value, limit: 10 }, token)
-            .then((r) => setLoans(r.items.filter((loan) => loan.status !== 'RETURNED')))
-            .catch((e: unknown) => setError(requestMessage(e)));
+          void find(value);
         }}
         onError={setError}
       />
@@ -747,7 +799,7 @@ export function LoanDetails({ id, token, staff, go, notify }: Props & { id: stri
               {renewing ? 'Renewing…' : 'Renew loan'}
             </button>
           ) : (
-            <p className="notice">
+            <p className="notice" role="status">
               Renewal unavailable:{' '}
               {loan.status === 'OVERDUE'
                 ? 'loan is overdue'
@@ -783,44 +835,132 @@ export function ScanButton({
   onValue: (value: string) => void;
   onError: (message: string) => void;
 }): JSX.Element {
+  const [state, setState] = useState<'idle' | 'starting' | 'scanning'>('idle');
+  const activeRef = useRef(false);
+  const deliveredRef = useRef(false);
+  const sessionRef = useRef(0);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  const stopTracks = useCallback((stream: MediaStream | null) => {
+    stream?.getTracks().forEach((track) => track.stop());
+  }, []);
+
+  const close = useCallback(() => {
+    sessionRef.current += 1;
+    activeRef.current = false;
+    stopTracks(streamRef.current);
+    streamRef.current = null;
+    setState('idle');
+  }, [stopTracks]);
+
+  useEffect(
+    () => () => {
+      sessionRef.current += 1;
+      activeRef.current = false;
+      stopTracks(streamRef.current);
+      streamRef.current = null;
+    },
+    [stopTracks],
+  );
+
+  const reportError = (errorMessage: string) => {
+    onError(errorMessage);
+  };
+
   const scan = async () => {
+    if (activeRef.current) return;
     if (!navigator.mediaDevices?.getUserMedia) {
-      onError('Camera scanning is not supported here. Use manual entry.');
+      reportError('Camera scanning is not supported here. Use manual entry.');
       return;
     }
-    try {
-      const BarcodeDetector = (
-        window as unknown as {
-          BarcodeDetector?: new (options: { formats: string[] }) => {
-            detect: (source: HTMLVideoElement) => Promise<Array<{ rawValue?: string }>>;
-          };
-        }
-      ).BarcodeDetector;
-      if (!BarcodeDetector) {
-        onError('Barcode scanning is not supported here. Use manual entry.');
-        return;
+    const BarcodeDetector = (
+      window as unknown as {
+        BarcodeDetector?: new (options: { formats: string[] }) => {
+          detect: (source: HTMLVideoElement) => Promise<Array<{ rawValue?: string }>>;
+        };
       }
+    ).BarcodeDetector;
+    if (!BarcodeDetector) {
+      reportError('Barcode scanning is not supported here. Use manual entry.');
+      return;
+    }
+
+    activeRef.current = true;
+    deliveredRef.current = false;
+    const session = sessionRef.current + 1;
+    sessionRef.current = session;
+    setState('starting');
+    try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment' },
       });
+      if (session !== sessionRef.current) {
+        stopTracks(stream);
+        return;
+      }
+      streamRef.current = stream;
+      setState('scanning');
       const video = document.createElement('video');
+      video.muted = true;
+      video.playsInline = true;
       video.srcObject = stream;
       await video.play();
       const result = await new BarcodeDetector({
         formats: ['qr_code', 'code_128', 'ean_13'],
       }).detect(video);
-      stream.getTracks().forEach((track) => track.stop());
+      if (session !== sessionRef.current) return;
       const value = result.at(0)?.rawValue?.trim();
-      if (value) onValue(value);
-      else onError('No valid QR or barcode was detected. Use manual entry.');
-    } catch {
-      onError('Camera permission was denied. Use manual entry.');
+      if (value && !deliveredRef.current) {
+        deliveredRef.current = true;
+        close();
+        onValue(value);
+      } else {
+        reportError('No valid QR or barcode was detected. Use manual entry.');
+        close();
+      }
+    } catch (error) {
+      if (session !== sessionRef.current) return;
+      reportError(
+        error instanceof DOMException && error.name === 'NotAllowedError'
+          ? 'Camera permission was denied. Use manual entry.'
+          : 'The camera could not scan a code. Use manual entry.',
+      );
+      close();
     }
   };
   return (
-    <button className="button quiet" type="button" onClick={() => void scan()}>
-      Scan QR / barcode
-    </button>
+    <>
+      <button
+        className="button quiet"
+        type="button"
+        disabled={state !== 'idle'}
+        onClick={() => void scan()}
+      >
+        Scan QR / barcode
+      </button>
+      {state !== 'idle' && (
+        <div className="modal-backdrop">
+          <div
+            className="modal scanner-session"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="scanner-title"
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') close();
+            }}
+          >
+            <h2 id="scanner-title">Scan QR or barcode</h2>
+            <p role="status">
+              {state === 'starting' ? 'Starting camera…' : 'Scanning for a code…'}
+            </p>
+            <p className="muted">Keep manual entry available if the camera cannot read the code.</p>
+            <button className="button quiet" type="button" autoFocus onClick={close}>
+              Close scanner
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 function State({ title, retry }: { title: string; retry?: () => void }): JSX.Element {

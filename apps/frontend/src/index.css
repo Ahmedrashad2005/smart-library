@@ -617,5 +617,5 @@ tbody tr:last-child td {
 }
 [dir='rtl'] .brand,
 [dir='rtl'] .nav-panel button {
-  text-align: right;
+  text-align: start;
 }

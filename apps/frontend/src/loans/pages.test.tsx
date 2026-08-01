@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BorrowPage, LoanList } from './pages';
 import { borrowCopy, listLoans, lookupCopies, lookupMembers } from './api';
 import type { Loan } from './api';
@@ -41,6 +41,11 @@ const props = {
 describe('rendered loan pages', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+    Object.defineProperty(window, 'BarcodeDetector', { configurable: true, value: undefined });
+    Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: undefined });
   });
   it('shows loading, data including backend overdue status, filter, and pagination', async () => {
     vi.mocked(listLoans).mockResolvedValue({
@@ -120,6 +125,9 @@ describe('rendered loan pages', () => {
     await user.type(screen.getByLabelText('Copy code, barcode, or QR value'), 'COPY-1');
     await user.click(screen.getByRole('button', { name: 'Find copy' }));
     await user.click(await screen.findByText('Book'));
+    await user.click(screen.getByRole('button', { name: 'Review borrow' }));
+    const dialog = screen.getByRole('dialog', { name: 'Confirm book borrowing' });
+    expect(dialog).toHaveTextContent('Eligible');
     const submit = screen.getByRole('button', { name: 'Confirm borrow' });
     await user.click(submit);
     expect(screen.getByRole('button', { name: 'Borrowing…' })).toBeDisabled();
@@ -127,5 +135,40 @@ describe('rendered loan pages', () => {
     expect(borrowCopy).toHaveBeenCalledTimes(1);
     resolveBorrow({ ...loan, status: 'ACTIVE' });
     expect(await screen.findByText(/Created loan due/)).toBeInTheDocument();
+  });
+  it('deduplicates concurrent manual and scanned lookup of the same copy', async () => {
+    let resolveLookup!: (value: { items: [] }) => void;
+    vi.mocked(lookupCopies).mockImplementation(
+      () => new Promise((resolve) => (resolveLookup = resolve)),
+    );
+    const stop = vi.fn();
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: {
+        getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [{ stop }] }),
+      },
+    });
+    class BarcodeDetector {
+      detect() {
+        return Promise.resolve([{ rawValue: 'COPY-1' }]);
+      }
+    }
+    Object.defineProperty(window, 'BarcodeDetector', {
+      configurable: true,
+      value: BarcodeDetector,
+    });
+    vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue();
+    const user = userEvent.setup();
+    render(<BorrowPage {...props} />);
+
+    await user.type(screen.getByLabelText('Copy code, barcode, or QR value'), 'COPY-1');
+    await user.click(screen.getByRole('button', { name: 'Find copy' }));
+    await user.click(screen.getByRole('button', { name: 'Scan QR / barcode' }));
+
+    await waitFor(() => expect(stop).toHaveBeenCalledOnce());
+    expect(lookupCopies).toHaveBeenCalledOnce();
+    expect(lookupCopies).toHaveBeenCalledWith('COPY-1', 'token');
+    expect(borrowCopy).not.toHaveBeenCalled();
+    resolveLookup({ items: [] });
   });
 });

@@ -101,17 +101,17 @@ function App(): JSX.Element {
   const [path, setPath] = useState(pathNow());
   const [session, setSession] = useState<Session>(null);
   const [notice, setNotice] = useState('');
+  const [arabic, setArabic] = useState(document.documentElement.dir === 'rtl');
   useEffect(() => {
     const listener = () => setPath(pathNow());
     window.addEventListener('popstate', listener);
     return () => window.removeEventListener('popstate', listener);
   }, []);
   const go = (to: string) => navigate(to, setPath);
-  const arabic = document.documentElement.dir === 'rtl';
   const language = () => {
     document.documentElement.dir = arabic ? 'ltr' : 'rtl';
     document.documentElement.lang = arabic ? 'en' : 'ar';
-    setPath(pathNow());
+    setArabic(!arabic);
   };
   const area = routeArea(path);
   const management = !!area;
