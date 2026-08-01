@@ -74,13 +74,17 @@ describe('loan RTL and accessibility behavior', () => {
     document.documentElement.dir = 'ltr';
     document.documentElement.lang = 'en';
     window.history.replaceState({}, '', '/books');
-    vi.mocked(apiRequest).mockResolvedValue({
-      items: [],
-      total: 0,
-      page: 1,
-      limit: 12,
-      totalPages: 0,
-    });
+    vi.mocked(apiRequest).mockImplementation(async (path: string) =>
+      path === '/categories'
+        ? []
+        : {
+            items: [],
+            total: 0,
+            page: 1,
+            limit: 12,
+            totalPages: 0,
+          },
+    );
   });
 
   it('switches the real application between English LTR and Arabic RTL', async () => {
@@ -89,10 +93,10 @@ describe('loan RTL and accessibility behavior', () => {
 
     expect(document.documentElement).toHaveAttribute('dir', 'ltr');
     expect(document.documentElement).toHaveAttribute('lang', 'en');
-    await user.click(screen.getByRole('button', { name: 'العربية' }));
+    await user.click(screen.getByRole('button', { name: 'English' }));
     expect(document.documentElement).toHaveAttribute('dir', 'rtl');
     expect(document.documentElement).toHaveAttribute('lang', 'ar');
-    await user.click(screen.getByRole('button', { name: 'English' }));
+    await user.click(screen.getByRole('button', { name: 'العربية' }));
     expect(document.documentElement).toHaveAttribute('dir', 'ltr');
     expect(document.documentElement).toHaveAttribute('lang', 'en');
   });

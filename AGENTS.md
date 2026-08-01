@@ -49,12 +49,18 @@ Use npm workspaces for JavaScript applications and Python virtual environments f
 - Provide member, librarian, and admin dashboards; reports, charts, system settings, user and role administration, and all specified REST endpoints.
 - Deliver migrations, realistic fake seed data, automated backend/frontend tests, Swagger, Docker, CI, and the requested documentation set before final completion.
 
-## Frontend design system (mandatory)
+## NAWA frontend design system (mandatory)
 
-All future frontend work must follow `docs/frontend-design-system.md`. It is the authoritative visual and interaction reference for the Smart Library web client.
+All future frontend work must follow `docs/frontend-design-system.md`. It is the authoritative visual and interaction reference for the NAWA product experience. The approved Arabic public-homepage reference is the visual North Star for the entire platform; preserve this identity across future public, member, librarian, and admin work while adapting each page to its function.
+
+- The customer-facing brand is `NAWA`, Arabic `نَوَى`. Do not rename internal packages, services, database identifiers, or historical technical documentation solely for branding.
+- The permanent brand palette is NAWA Navy `#102F5E`, Coral `#E86A6A`, Gold `#D9A441`, and Cream `#FFF9F4`. Colored interface emphasis follows an approximate 70% navy, 20% coral, and 10% gold ratio; white and light neutral surfaces may occupy most of a page.
+- Use the approved logo assets in `apps/frontend/public/brand/`. Do not redraw, distort, recolor ad hoc, or add gradients/effects to the primary logo. Use full-color on light surfaces, navy monochrome where reduced color is required, white on dark brand surfaces, and black only where required.
+- Treat the approved public homepage as a design-language reference, not as a layout template for every page. Reuse its color, typography, spacing, border, radius, shadow, button, input, card, icon, badge, navigation, and feedback patterns.
+- Arabic is the primary polished public presentation and RTL must be designed deliberately. English LTR must remain equally usable and coherent.
 
 - Use a modern, light, clean, simple, and welcoming interface. White and soft off-white surfaces are the default; do not use pure-black backgrounds or dark navigation by default.
-- Use the documented calm blue and teal palette, tokens, spacing, typography, borders, shadows, status patterns, and component rules consistently.
+- Use the documented navy-led NAWA palette, restrained coral emotional accents, very sparse gold premium details, warm cream surfaces, tokens, spacing, typography, borders, shadows, status patterns, and component rules consistently. Teal and unrelated legacy accents must not remain dominant in newly created or redesigned components.
 - Favor generous whitespace, a clear visual hierarchy, moderate corner radii, subtle borders, and very light shadows. Keep forms, cards, tables, filters, and dashboards easy to scan.
 - Do not introduce heavy, crowded, futuristic, neon, gaming, glassmorphism, glowing, or decoration-first visual treatments. Avoid excessive gradients and animation, and do not expose too many controls at once.
 - Design for students, librarians, administrators, older users, and small touch screens. English LTR and Arabic RTL must be equally polished rather than mirrored as an afterthought.

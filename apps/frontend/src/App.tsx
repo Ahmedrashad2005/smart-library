@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import type { Role } from './auth/access';
 import { apiRequest, requestMessage } from './lib/api';
+import { PublicCatalog } from './catalog/PublicCatalog';
+import { PublicHeader } from './catalog/PublicHeader';
 import { canAccessLoanRoute, isMemberLoanRoute, isStaffLoanRoute } from './loans/access';
 import { LoanRoute } from './loans/pages';
 import {
@@ -92,6 +94,7 @@ function pathNow(): string {
 function navigate(to: string, setPath: (path: string) => void): void {
   window.history.pushState({}, '', to);
   setPath(pathNow());
+  window.dispatchEvent(new Event('nawa:navigation'));
 }
 function bookTitle(book: Book): string {
   return document.documentElement.dir === 'rtl' ? book.titleAr || book.title : book.title;
@@ -103,7 +106,10 @@ function App(): JSX.Element {
   const [notice, setNotice] = useState('');
   const [arabic, setArabic] = useState(document.documentElement.dir === 'rtl');
   useEffect(() => {
-    const listener = () => setPath(pathNow());
+    const listener = () => {
+      setPath(pathNow());
+      window.dispatchEvent(new Event('nawa:navigation'));
+    };
     window.addEventListener('popstate', listener);
     return () => window.removeEventListener('popstate', listener);
   }, []);
@@ -146,29 +152,18 @@ function App(): JSX.Element {
   else if (area) page = <MasterManager area={area} token={session!.token} notify={setNotice} />;
   else if (path.startsWith('/books/'))
     page = <BookDetail slug={path.split('/').at(-1) || ''} go={go} />;
-  else page = <Catalog go={go} />;
+  else
+    page = <PublicCatalog locale={arabic ? 'ar' : 'en'} go={go} showFullCatalog={path !== '/'} />;
   return (
-    <main className="app-shell">
-      <header className="site-header">
-        <button className="brand" onClick={() => go('/books')}>
-          Smart Library <span>مكتبة ذكية</span>
-        </button>
-        <nav aria-label="Main navigation">
-          <button onClick={() => go('/books')}>Catalog</button>
-          {session && session.role !== 'MEMBER' && (
-            <button onClick={() => go('/librarian/books')}>Management</button>
-          )}
-          {session && session.role !== 'MEMBER' && (
-            <button onClick={() => go('/librarian/loans')}>Circulation</button>
-          )}
-          {session?.role === 'MEMBER' && <button onClick={() => go('/my-loans')}>My loans</button>}
-          {session?.role === 'ADMIN' && (
-            <button onClick={() => go('/admin/categories')}>Administration</button>
-          )}
-          {session && <button onClick={() => setSession(null)}>Sign out</button>}
-          <button onClick={language}>{arabic ? 'English' : 'العربية'}</button>
-        </nav>
-      </header>
+    <div className="app-shell">
+      <PublicHeader
+        locale={arabic ? 'ar' : 'en'}
+        currentPath={path}
+        session={session}
+        go={go}
+        onLanguageChange={language}
+        onSignOut={() => setSession(null)}
+      />
       {notice && (
         <div className="toast" role="status">
           <span>{notice}</span>
@@ -177,8 +172,8 @@ function App(): JSX.Element {
           </button>
         </div>
       )}
-      {page}
-    </main>
+      <main>{page}</main>
+    </div>
   );
 }
 
@@ -250,77 +245,6 @@ function LoginGate({
           </button>
         </form>
       </div>
-    </section>
-  );
-}
-
-function Catalog({ go }: { go: (to: string) => void }): JSX.Element {
-  const [query, setQuery] = useState('');
-  const [data, setData] = useState<CatalogResult | null>(null);
-  const [error, setError] = useState('');
-  const load = async (q = '') => {
-    setError('');
-    try {
-      setData(await apiRequest<CatalogResult>(`/books?limit=12&q=${encodeURIComponent(q)}`));
-    } catch (reason) {
-      setError(requestMessage(reason));
-    }
-  };
-  useEffect(() => {
-    void load();
-  }, []);
-  return (
-    <section className="page">
-      <div className="hero">
-        <p className="eyebrow">Discover the collection</p>
-        <h1>Find a book, then find it easily.</h1>
-        <p>Search the library’s bilingual catalog and see availability at a glance.</p>
-        <form
-          className="search-form"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void load(query);
-          }}
-        >
-          <label className="sr-only" htmlFor="catalog-search">
-            Search books
-          </label>
-          <input
-            id="catalog-search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Title, author, or ISBN"
-          />
-          <button className="button primary">Search</button>
-        </form>
-      </div>
-      {!data && !error ? (
-        <Loading />
-      ) : error ? (
-        <ErrorState message={error} retry={() => void load(query)} />
-      ) : !data?.items.length ? (
-        <EmptyState title="No books match these filters" />
-      ) : (
-        <div className="book-grid">
-          {data.items.map((book) => (
-            <article className="book-card" key={book.id}>
-              <div className="cover">{bookTitle(book).slice(0, 1)}</div>
-              <div>
-                <p className="muted">{book.category?.nameEn}</p>
-                <h2>{bookTitle(book)}</h2>
-                <p className="clamp">{book.description || 'A library title ready to explore.'}</p>
-                <Badge
-                  value={book.availableCopies ? `${book.availableCopies} available` : 'Unavailable'}
-                  tone={book.availableCopies ? 'success' : 'warning'}
-                />
-                <button className="text-button" onClick={() => go(`/books/${book.slug}`)}>
-                  View details
-                </button>
-              </div>
-            </article>
-          ))}
-        </div>
-      )}
     </section>
   );
 }
