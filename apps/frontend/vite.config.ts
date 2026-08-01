@@ -9,5 +9,7 @@ export default defineConfig({
   },
   test: {
     cache: { dir: '/tmp/smart-library-vitest' },
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.ts'],
   },
 });

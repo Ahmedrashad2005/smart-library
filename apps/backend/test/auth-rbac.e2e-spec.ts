@@ -241,4 +241,45 @@ describe('Phase 2 authentication and RBAC', () => {
       ).status,
     ).toBe(200);
   });
+  it('provides staff-only safe member eligibility lookup', async () => {
+    const [librarian, admin, member] = await Promise.all([
+      api().post('/api/v1/auth/login').send({ email: 'librarian1@smart-library.test', password }),
+      api().post('/api/v1/auth/login').send({ email: 'admin@smart-library.test', password }),
+      api().post('/api/v1/auth/login').send({ email: 'member1@smart-library.test', password }),
+    ]);
+    expect((await api().get('/api/v1/users/members?q=Member')).status).toBe(401);
+    expect(
+      (
+        await api()
+          .get('/api/v1/users/members?q=Member')
+          .set('Authorization', `Bearer ${member.body.accessToken}`)
+      ).status,
+    ).toBe(403);
+    const byName = await api()
+      .get('/api/v1/users/members?q=Member%205')
+      .set('Authorization', `Bearer ${librarian.body.accessToken}`);
+    expect(byName.status).toBe(200);
+    const target = byName.body.find(
+      (item: { email: string }) => item.email === 'member5@smart-library.test',
+    );
+    expect(target).toMatchObject({
+      status: 'ACTIVE',
+      activeLoanCount: expect.any(Number),
+      overdueLoanCount: 1,
+      remainingLoanCapacity: expect.any(Number),
+      eligible: false,
+    });
+    expect(target).not.toHaveProperty('passwordHash');
+    expect(target).not.toHaveProperty('refreshTokens');
+    expect(target).not.toHaveProperty('qrCodeValue');
+    const byEmail = await api()
+      .get('/api/v1/users/members?q=member5%40smart-library.test')
+      .set('Authorization', `Bearer ${admin.body.accessToken}`);
+    expect(byEmail.status).toBe(200);
+    expect(byEmail.body).toHaveLength(1);
+    expect(byEmail.body[0]).toMatchObject({
+      email: 'member5@smart-library.test',
+      remainingLoanCapacity: 4,
+    });
+  });
 });

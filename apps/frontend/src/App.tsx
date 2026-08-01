@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import type { Role } from './auth/access';
 import { apiRequest, requestMessage } from './lib/api';
+import { canAccessLoanRoute, isMemberLoanRoute, isStaffLoanRoute } from './loans/access';
+import { LoanRoute } from './loans/pages';
 import {
   canManageRoute,
   managementListQuery,
@@ -113,8 +115,21 @@ function App(): JSX.Element {
   };
   const area = routeArea(path);
   const management = !!area;
+  const loanRoute = isStaffLoanRoute(path) || isMemberLoanRoute(path);
   let page: JSX.Element;
-  if (management && !canManageRoute(session?.role, path))
+  if (loanRoute && !canAccessLoanRoute(!!session, session?.role, path))
+    page = <LoginGate session={session} setSession={setSession} />;
+  else if (loanRoute)
+    page = (
+      <LoanRoute
+        path={path}
+        token={session!.token}
+        staff={isStaffLoanRoute(path)}
+        go={go}
+        notify={setNotice}
+      />
+    );
+  else if (management && !canManageRoute(session?.role, path))
     page = <LoginGate session={session} setSession={setSession} />;
   else if (
     path === '/librarian/books' ||
@@ -143,6 +158,10 @@ function App(): JSX.Element {
           {session && session.role !== 'MEMBER' && (
             <button onClick={() => go('/librarian/books')}>Management</button>
           )}
+          {session && session.role !== 'MEMBER' && (
+            <button onClick={() => go('/librarian/loans')}>Circulation</button>
+          )}
+          {session?.role === 'MEMBER' && <button onClick={() => go('/my-loans')}>My loans</button>}
           {session?.role === 'ADMIN' && (
             <button onClick={() => go('/admin/categories')}>Administration</button>
           )}

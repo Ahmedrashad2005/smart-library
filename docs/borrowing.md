@@ -16,3 +16,9 @@ Invalid UUIDs, dates, statuses, and return conditions receive the standard valid
 Borrowing, return, and renewal use serializable PostgreSQL transactions with a row lock on the book copy. Each action writes an audit record. A loan is exposed as overdue whenever it is unreturned and its due date is in the past; no scheduled job is required for correctness.
 
 Returning a damaged copy preserves the `DAMAGED` copy state and excludes it from availability. Restoring, fines, reservations, notifications, and circulation UI are outside Phase 4 Part 1.
+
+## Phase 4 Part 2 frontend
+
+Staff use `/librarian/loans`, `/librarian/loans/borrow`, `/librarian/loans/:id`, and `/librarian/returns`; these routes require LIBRARIAN or ADMIN. Members use `/my-loans` and `/my-loans/:id`, which call only member-scoped endpoints. The borrow workflow searches an eligibility-safe member summary, then a physical copy by manual copy code, barcode, QR value, or an optional browser camera scan. Manual entry remains available when camera permissions or `BarcodeDetector` are unavailable.
+
+Return processing confirms an allowed copy condition and optional note. Loan lists/details use the backend-provided effective status; browser date helpers are presentation-only. Reservations, fines, payments, notifications, recommendations, and background jobs remain outside this phase.

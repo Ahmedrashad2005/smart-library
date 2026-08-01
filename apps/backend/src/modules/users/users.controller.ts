@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { CurrentUser, Roles } from '../../common/auth.decorators';
@@ -16,6 +16,9 @@ export class UsersController {
   }
   @Patch('me') updateMe(@CurrentUser() user: { id: string }, @Body() dto: UpdateMeDto) {
     return this.users.updateMe(user.id, dto);
+  }
+  @Roles(UserRole.LIBRARIAN, UserRole.ADMIN) @Get('members') members(@Query('q') q?: string) {
+    return this.users.members(q);
   }
   @Roles(UserRole.ADMIN) @Get() list() {
     return this.users.list();

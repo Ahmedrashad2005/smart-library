@@ -1,6 +1,6 @@
 # Smart Library
 
-Phase 2 adds the PostgreSQL/Prisma foundation, secure authentication, user management, RBAC, Mailpit email flows, and Swagger. Later library features remain scheduled in `docs/implementation-plan.md`.
+Phase 4 circulation includes role-protected staff borrowing/return pages (`/librarian/loans`) and member loan pages (`/my-loans`). Manual copy-code, barcode, and QR entry work everywhere; browser camera scanning is used only after an explicit scan action and falls back safely when unsupported.
 
 ## Applications
 

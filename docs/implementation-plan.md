@@ -36,6 +36,7 @@ Phase 1 deliberately contains no domain schema, authentication, catalog, UI flow
 ## Phase 4 — Library operations
 
 - [x] Part 1: Implement configurable rules and transaction-safe borrowing, returns, renewal, due dates, eligibility, availability counters, audit logging, and loan query APIs.
+- [x] Part 2: Implement role-protected staff/member loan pages, manual/QR/barcode-assisted borrowing and returns, and renewal workflows.
 - [ ] Implement returns, overdue and configurable fine calculation, payments/waivers/adjustments, and notification hooks.
 - [ ] Implement renewal eligibility and approvals/rejections.
 - [ ] Implement FIFO reservations, queue positions, pickup expiry, and safe returned-copy assignment.

@@ -1,5 +1,5 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { UserRole } from '@prisma/client';
+import { UserRole, UserStatus } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 const select = {
   id: true,
@@ -34,6 +34,56 @@ export class UsersService {
       where: { deletedAt: null },
       select,
       orderBy: { createdAt: 'desc' },
+    });
+  }
+  async members(q = '') {
+    const now = new Date();
+    const members = await this.prisma.user.findMany({
+      where: {
+        role: UserRole.MEMBER,
+        deletedAt: null,
+        ...(q
+          ? {
+              OR: [
+                { fullName: { contains: q, mode: 'insensitive' } },
+                { email: { contains: q, mode: 'insensitive' } },
+                { membershipNumber: { contains: q, mode: 'insensitive' } },
+              ],
+            }
+          : {}),
+      },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        membershipNumber: true,
+        status: true,
+        emailVerifiedAt: true,
+        loans: { where: { returnedAt: null }, select: { dueAt: true } },
+      },
+      take: 20,
+      orderBy: { fullName: 'asc' },
+    });
+    return members.map((member) => {
+      const overdueLoanCount = member.loans.filter((loan) => loan.dueAt < now).length;
+      const activeLoanCount = member.loans.length;
+      const eligible =
+        member.status === UserStatus.ACTIVE &&
+        !!member.emailVerifiedAt &&
+        !overdueLoanCount &&
+        activeLoanCount < 5;
+      return {
+        id: member.id,
+        fullName: member.fullName,
+        email: member.email,
+        membershipNumber: member.membershipNumber,
+        status: member.status,
+        emailVerifiedAt: member.emailVerifiedAt,
+        activeLoanCount,
+        overdueLoanCount,
+        remainingLoanCapacity: Math.max(0, 5 - activeLoanCount),
+        eligible,
+      };
     });
   }
   async one(id: string) {
