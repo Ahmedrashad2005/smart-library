@@ -36,6 +36,28 @@ const title = (loan: Loan) =>
   document.documentElement.dir === 'rtl'
     ? loan.bookCopy.book.titleAr || loan.bookCopy.book.title
     : loan.bookCopy.book.title;
+const authorNames = (loan: Loan) =>
+  loan.bookCopy.book.authors
+    .map((author) =>
+      document.documentElement.dir === 'rtl' ? author.arabicName || author.name : author.name,
+    )
+    .join(', ');
+const BookCover = ({ loan, large = false }: { loan: Loan; large?: boolean }) =>
+  loan.bookCopy.book.coverImageUrl ? (
+    <img
+      className={`cover loan-cover ${large ? 'large' : 'mini'}`}
+      src={loan.bookCopy.book.coverImageUrl}
+      alt={`Cover of ${title(loan)}`}
+    />
+  ) : (
+    <div
+      className={`cover ${large ? 'large' : 'mini'}`}
+      role="img"
+      aria-label={`No cover available for ${title(loan)}`}
+    >
+      {title(loan).slice(0, 1)}
+    </div>
+  );
 const status = (loan: Loan) => (
   <span className={`badge loan-${loan.status.toLowerCase()}`}>{loan.status}</span>
 );
@@ -172,9 +194,16 @@ export function LoanList({
                       )}
                     </td>
                     <td>
-                      <strong>{title(loan)}</strong>
-                      <br />
-                      <span className="muted">{loan.bookCopy.copyCode}</span>
+                      <div className="loan-book-summary">
+                        <BookCover loan={loan} />
+                        <span>
+                          <strong>{title(loan)}</strong>
+                          <br />
+                          <span className="muted">{authorNames(loan) || 'Unknown author'}</span>
+                          <br />
+                          <span className="muted">{loan.bookCopy.copyCode}</span>
+                        </span>
+                      </div>
                     </td>
                     <td>
                       <span>Borrowed {date(loan.borrowedAt)}</span>
@@ -600,6 +629,10 @@ export function ReturnsPage({ token, go, notify }: Props): JSX.Element {
 export function LoanDetails({ id, token, staff, go, notify }: Props & { id: string }): JSX.Element {
   const [loan, setLoan] = useState<Loan | null>(null);
   const [error, setError] = useState('');
+  const [renewing, setRenewing] = useState(false);
+  const [renewalResult, setRenewalResult] = useState<{ previous: string; current: string } | null>(
+    null,
+  );
   const load = useCallback(
     () =>
       loanDetail(id, token)
@@ -629,13 +662,18 @@ export function LoanDetails({ id, token, staff, go, notify }: Props & { id: stri
       </section>
     );
   const renew = async () => {
+    if (renewing) return;
+    setRenewing(true);
     try {
       const old = loan.dueAt;
       const renewed = await renewLoan(loan.id, token);
       setLoan(renewed);
+      setRenewalResult({ previous: old, current: renewed.dueAt });
       notify(`Renewed: ${date(old)} → ${date(renewed.dueAt)}`);
     } catch (e) {
       setError(requestMessage(e));
+    } finally {
+      setRenewing(false);
     }
   };
   return (
@@ -644,10 +682,11 @@ export function LoanDetails({ id, token, staff, go, notify }: Props & { id: stri
         ← Back
       </button>
       <div className="detail-grid">
-        <div className="cover large">{title(loan).slice(0, 1)}</div>
+        <BookCover loan={loan} large />
         <div>
           <p className="eyebrow">{status(loan)}</p>
           <h1>{title(loan)}</h1>
+          <p>{authorNames(loan) || 'Unknown author'}</p>
           <p>
             {loan.bookCopy.copyCode}
             {loan.bookCopy.barcode ? ` · ${loan.bookCopy.barcode}` : ''}
@@ -671,13 +710,21 @@ export function LoanDetails({ id, token, staff, go, notify }: Props & { id: stri
                 {loan.renewedCount}/2; {remainingRenewals(loan)} remaining
               </dd>
             </div>
-            <div>
-              <dt>Staff</dt>
-              <dd>
-                Issued by {loan.issuedBy?.fullName || '—'}; returned by{' '}
-                {loan.returnedBy?.fullName || '—'}
-              </dd>
-            </div>
+            {staff && (
+              <div>
+                <dt>Staff</dt>
+                <dd>
+                  Issued by {loan.issuedBy?.fullName || '—'}; returned by{' '}
+                  {loan.returnedBy?.fullName || '—'}
+                </dd>
+              </div>
+            )}
+            {loan.lastRenewedAt && (
+              <div>
+                <dt>Last renewed</dt>
+                <dd>{date(loan.lastRenewedAt)}</dd>
+              </div>
+            )}
             {staff && (
               <div>
                 <dt>Member</dt>
@@ -696,8 +743,8 @@ export function LoanDetails({ id, token, staff, go, notify }: Props & { id: stri
             )}
           </dl>
           {loanCanRenew(loan) ? (
-            <button className="button primary" onClick={() => void renew()}>
-              Renew loan
+            <button className="button primary" disabled={renewing} onClick={() => void renew()}>
+              {renewing ? 'Renewing…' : 'Renew loan'}
             </button>
           ) : (
             <p className="notice">
@@ -708,6 +755,11 @@ export function LoanDetails({ id, token, staff, go, notify }: Props & { id: stri
                   ? 'loan is returned'
                   : 'renewal limit reached'}
               .
+            </p>
+          )}
+          {renewalResult && (
+            <p className="notice" role="status">
+              Renewal completed: {date(renewalResult.previous)} → {date(renewalResult.current)}.
             </p>
           )}
           {staff && loan.status !== 'RETURNED' && (

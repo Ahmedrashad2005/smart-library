@@ -27,7 +27,7 @@ const loan: Loan = {
     copyCode: 'COPY-1',
     status: 'BORROWED',
     condition: 'GOOD',
-    book: { id: 'b', title: 'Book' },
+    book: { id: 'b', title: 'Book', authors: [] },
   },
 };
 const props = {

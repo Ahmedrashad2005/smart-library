@@ -26,6 +26,7 @@ export type Loan = {
       titleAr?: string | null;
       slug?: string;
       coverImageUrl?: string | null;
+      authors: Array<{ id: string; name: string; arabicName?: string | null }>;
     };
     section?: { code: string; nameEn: string } | null;
     shelf?: { code: string; nameEn: string } | null;

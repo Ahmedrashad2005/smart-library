@@ -26,7 +26,7 @@ const makeLoan = (status: LoanStatus = 'ACTIVE', copyStatus = 'BORROWED'): Loan 
     barcode: 'BAR-100',
     status: copyStatus,
     condition: 'GOOD',
-    book: { id: 'book-1', title: 'Clean Architecture' },
+    book: { id: 'book-1', title: 'Clean Architecture', authors: [] },
   },
 });
 const props = {

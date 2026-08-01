@@ -21,7 +21,18 @@ const loanInclude = {
   member: { select: { id: true, fullName: true, email: true, membershipNumber: true } },
   bookCopy: {
     include: {
-      book: { select: { id: true, title: true, titleAr: true, slug: true } },
+      book: {
+        select: {
+          id: true,
+          title: true,
+          titleAr: true,
+          slug: true,
+          coverImageUrl: true,
+          authors: {
+            select: { author: { select: { id: true, name: true, nameAr: true } } },
+          },
+        },
+      },
       section: true,
       shelf: true,
     },
@@ -29,6 +40,7 @@ const loanInclude = {
   issuedBy: { select: { id: true, fullName: true } },
   returnedBy: { select: { id: true, fullName: true } },
 } satisfies Prisma.LoanInclude;
+type LoanRecord = Prisma.LoanGetPayload<{ include: typeof loanInclude }>;
 
 @Injectable()
 export class LoansService {
@@ -310,7 +322,21 @@ export class LoansService {
       },
     });
   }
-  private present<T extends { returnedAt: Date | null; dueAt: Date; status: LoanStatus }>(loan: T) {
-    return { ...loan, status: this.effectiveStatus(loan) };
+  private present(loan: LoanRecord) {
+    return {
+      ...loan,
+      status: this.effectiveStatus(loan),
+      bookCopy: {
+        ...loan.bookCopy,
+        book: {
+          ...loan.bookCopy.book,
+          authors: loan.bookCopy.book.authors.map(({ author }) => ({
+            id: author.id,
+            name: author.name,
+            arabicName: author.nameAr,
+          })),
+        },
+      },
+    };
   }
 }

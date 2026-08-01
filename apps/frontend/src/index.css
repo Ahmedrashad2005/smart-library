@@ -187,6 +187,20 @@ label textarea,
   min-height: 260px;
   font-size: 4rem;
 }
+.cover.mini {
+  width: 46px;
+  min-height: 64px;
+  flex: 0 0 46px;
+  font-size: 1.15rem;
+}
+.loan-cover {
+  object-fit: cover;
+}
+.loan-book-summary {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
 .clamp {
   min-height: 47px;
   margin: 6px 0;

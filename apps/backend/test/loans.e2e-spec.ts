@@ -305,6 +305,12 @@ describe('Phase 4 borrowing lifecycle', () => {
       (await api().get(`/api/v1/loans/${other.id}`).set('Authorization', `Bearer ${member}`))
         .status,
     ).toBe(403);
+    const copy = await prisma.bookCopy.findUniqueOrThrow({ where: { id: own.bookCopyId } });
+    const originalBook = await prisma.book.findUniqueOrThrow({ where: { id: copy.bookId } });
+    await prisma.book.update({
+      where: { id: copy.bookId },
+      data: { coverImageUrl: 'https://images.test/member-loan-cover.jpg' },
+    });
     const mine = await api()
       .get('/api/v1/loans/me?status=ACTIVE&page=1&limit=1')
       .set('Authorization', `Bearer ${member}`);
@@ -314,7 +320,27 @@ describe('Phase 4 borrowing lifecycle', () => {
         (loan: { member: { email: string } }) => loan.member.email === 'member1@smart-library.test',
       ),
     ).toBe(true);
-    const copy = await prisma.bookCopy.findUniqueOrThrow({ where: { id: own.bookCopyId } });
+    const mineItem = mine.body.items.find((item: { id: string }) => item.id === own.id);
+    expect(mineItem.bookCopy.book.coverImageUrl).toBe('https://images.test/member-loan-cover.jpg');
+    expect(mineItem.bookCopy.book.authors.length).toBeGreaterThan(0);
+    expect(mineItem.bookCopy.book.authors[0]).toEqual({
+      id: expect.any(String),
+      name: expect.any(String),
+      arabicName: expect.anything(),
+    });
+    expect(mineItem.member.passwordHash).toBeUndefined();
+    expect(mineItem.issuedBy.passwordHash).toBeUndefined();
+    expect(mineItem).not.toHaveProperty('auditLogs');
+    const detail = await api()
+      .get(`/api/v1/loans/${own.id}`)
+      .set('Authorization', `Bearer ${member}`);
+    expect(detail.status).toBe(200);
+    expect(detail.body.bookCopy.book.authors).toEqual(mineItem.bookCopy.book.authors);
+    await prisma.book.update({ where: { id: copy.bookId }, data: { coverImageUrl: null } });
+    const nullCover = await api()
+      .get(`/api/v1/loans/${own.id}`)
+      .set('Authorization', `Bearer ${member}`);
+    expect(nullCover.body.bookCopy.book.coverImageUrl).toBeNull();
     const loanMember = await prisma.user.findUniqueOrThrow({
       where: { email: 'member1@smart-library.test' },
     });
@@ -326,5 +352,9 @@ describe('Phase 4 borrowing lifecycle', () => {
     expect(listed.status).toBe(200);
     expect(listed.body).toMatchObject({ page: 1, limit: 1 });
     expect(listed.body.items[0].id).toBe(own.id);
+    await prisma.book.update({
+      where: { id: copy.bookId },
+      data: { coverImageUrl: originalBook.coverImageUrl },
+    });
   });
 });

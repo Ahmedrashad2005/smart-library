@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { CurrentUser, Roles } from '../../common/auth.decorators';
 import { JwtAuthGuard, RolesGuard } from '../../common/auth.guards';
@@ -40,6 +40,10 @@ export class LoansController {
     return this.loans.renew(id, user);
   }
   @ApiOperation({ summary: 'List the authenticated member’s loans.' })
+  @ApiOkResponse({
+    description:
+      'Paginated safe loans including nullable book coverImageUrl and authors with id, name, and arabicName.',
+  })
   @ApiQuery({ name: 'status', required: false, enum: ['ACTIVE', 'OVERDUE', 'RETURNED'] })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -49,6 +53,10 @@ export class LoansController {
     return this.loans.list(query, user.id);
   }
   @ApiOperation({ summary: 'Search and filter all loans (LIBRARIAN, ADMIN).' })
+  @ApiOkResponse({
+    description:
+      'Paginated safe loans including nullable book coverImageUrl and authors with id, name, and arabicName.',
+  })
   @ApiQuery({ name: 'q', required: false, description: 'Member, title, copy code, or barcode.' })
   @ApiQuery({ name: 'memberId', required: false })
   @ApiQuery({ name: 'bookId', required: false })
@@ -66,6 +74,10 @@ export class LoansController {
     return this.loans.list(query);
   }
   @ApiOperation({ summary: 'Get a loan; MEMBERS may view only their own loan.' })
+  @ApiOkResponse({
+    description:
+      'Safe loan detail including nullable book coverImageUrl and authors with id, name, and arabicName.',
+  })
   @Roles(UserRole.MEMBER, UserRole.LIBRARIAN, UserRole.ADMIN)
   @Get(':id')
   detail(@Param('id') id: string, @CurrentUser() user: { id: string; role: UserRole }) {

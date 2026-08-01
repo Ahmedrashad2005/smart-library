@@ -22,3 +22,5 @@ Returning a damaged copy preserves the `DAMAGED` copy state and excludes it from
 Staff use `/librarian/loans`, `/librarian/loans/borrow`, `/librarian/loans/:id`, and `/librarian/returns`; these routes require LIBRARIAN or ADMIN. Members use `/my-loans` and `/my-loans/:id`, which call only member-scoped endpoints. The borrow workflow searches an eligibility-safe member summary, then a physical copy by manual copy code, barcode, QR value, or an optional browser camera scan. Manual entry remains available when camera permissions or `BarcodeDetector` are unavailable.
 
 Return processing confirms an allowed copy condition and optional note. Loan lists/details use the backend-provided effective status; browser date helpers are presentation-only. Reservations, fines, payments, notifications, recommendations, and background jobs remain outside this phase.
+
+Member loan lists and details use the shared safe loan response, including a nullable book cover and safe bilingual author display fields. The UI renders a compact initial placeholder when a cover is absent.
