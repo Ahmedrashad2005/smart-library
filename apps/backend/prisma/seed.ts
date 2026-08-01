@@ -1,6 +1,7 @@
 import {
   BookCopyCondition,
   BookCopyStatus,
+  LoanStatus,
   PrismaClient,
   UserRole,
   UserStatus,
@@ -278,6 +279,80 @@ async function main(): Promise<void> {
         availableCopies: copies.filter((copy) => copy.status === BookCopyStatus.AVAILABLE).length,
       },
     });
+  }
+  await prisma.loan.deleteMany({ where: { returnNotes: 'Seed Phase 4' } });
+  const [member, secondMember, librarian] = await Promise.all([
+    prisma.user.findUniqueOrThrow({ where: { email: 'member1@smart-library.test' } }),
+    prisma.user.findUniqueOrThrow({ where: { email: 'member5@smart-library.test' } }),
+    prisma.user.findUniqueOrThrow({ where: { email: 'librarian1@smart-library.test' } }),
+  ]);
+  const loanCopies = await prisma.bookCopy.findMany({
+    where: { status: BookCopyStatus.AVAILABLE, isArchived: false },
+    take: 4,
+    orderBy: { copyCode: 'asc' },
+  });
+  if (loanCopies.length === 4) {
+    const now = new Date();
+    const future = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+    const overdue = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+    await prisma.loan.createMany({
+      data: [
+        {
+          memberId: member.id,
+          bookCopyId: loanCopies[0]!.id,
+          issuedById: librarian.id,
+          dueAt: future,
+          status: LoanStatus.ACTIVE,
+          returnNotes: 'Seed Phase 4',
+        },
+        {
+          memberId: secondMember.id,
+          bookCopyId: loanCopies[1]!.id,
+          issuedById: librarian.id,
+          dueAt: future,
+          returnedAt: now,
+          returnedById: librarian.id,
+          returnCondition: BookCopyCondition.GOOD,
+          status: LoanStatus.RETURNED,
+          returnNotes: 'Seed Phase 4',
+        },
+        {
+          memberId: secondMember.id,
+          bookCopyId: loanCopies[2]!.id,
+          issuedById: librarian.id,
+          dueAt: overdue,
+          status: LoanStatus.OVERDUE,
+          returnNotes: 'Seed Phase 4',
+        },
+        {
+          memberId: member.id,
+          bookCopyId: loanCopies[3]!.id,
+          issuedById: librarian.id,
+          dueAt: future,
+          renewedCount: 1,
+          lastRenewedAt: now,
+          status: LoanStatus.ACTIVE,
+          returnNotes: 'Seed Phase 4',
+        },
+      ],
+    });
+    await prisma.bookCopy.updateMany({
+      where: { id: { in: [loanCopies[0]!.id, loanCopies[2]!.id, loanCopies[3]!.id] } },
+      data: { status: BookCopyStatus.BORROWED },
+    });
+    for (const bookId of [...new Set(loanCopies.map((copy) => copy.bookId))]) {
+      const copies = await prisma.bookCopy.findMany({
+        where: { bookId, isArchived: false },
+        select: { status: true },
+      });
+      await prisma.book.update({
+        where: { id: bookId },
+        data: {
+          totalCopies: copies.length,
+          availableCopies: copies.filter((copy) => copy.status === BookCopyStatus.AVAILABLE).length,
+        },
+      });
+    }
   }
 }
 

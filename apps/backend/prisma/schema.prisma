@@ -45,6 +45,12 @@ enum BookCopyCondition {
   DAMAGED
 }
 
+enum LoanStatus {
+  ACTIVE
+  RETURNED
+  OVERDUE
+}
+
 model User {
   id                  String                    @id @default(uuid()) @db.Uuid
   fullName            String
@@ -67,6 +73,9 @@ model User {
   passwordResetTokens PasswordResetToken[]
   auditActions        AuditLog[]                @relation("AuditActor")
   auditTargets        AuditLog[]                @relation("AuditTarget")
+  loans               Loan[]                    @relation("LoanMember")
+  issuedLoans         Loan[]                    @relation("LoanIssuer")
+  returnedLoans       Loan[]                    @relation("LoanReturner")
 
   @@index([status])
   @@index([role])
@@ -292,6 +301,31 @@ model BookCopy {
   book Book @relation(fields: [bookId], references: [id], onDelete: Restrict)
   section LibrarySection @relation(fields: [sectionId], references: [id], onDelete: Restrict)
   shelf Shelf @relation(fields: [shelfId], references: [id], onDelete: Restrict)
+  loans Loan[]
   @@index([bookId, status, isArchived])
   @@index([sectionId, shelfId])
+}
+model Loan {
+  id String @id @default(uuid()) @db.Uuid
+  memberId String @db.Uuid
+  bookCopyId String @db.Uuid
+  borrowedAt DateTime @default(now())
+  dueAt DateTime
+  returnedAt DateTime?
+  renewedCount Int @default(0)
+  status LoanStatus @default(ACTIVE)
+  issuedById String @db.Uuid
+  returnedById String? @db.Uuid
+  lastRenewedAt DateTime?
+  returnCondition BookCopyCondition?
+  returnNotes String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  member User @relation("LoanMember", fields: [memberId], references: [id], onDelete: Restrict)
+  bookCopy BookCopy @relation(fields: [bookCopyId], references: [id], onDelete: Restrict)
+  issuedBy User @relation("LoanIssuer", fields: [issuedById], references: [id], onDelete: Restrict)
+  returnedBy User? @relation("LoanReturner", fields: [returnedById], references: [id], onDelete: Restrict)
+  @@index([memberId, returnedAt, dueAt])
+  @@index([bookCopyId, returnedAt])
+  @@index([status, dueAt])
 }
