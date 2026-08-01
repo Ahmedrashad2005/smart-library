@@ -1,0 +1,297 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  MEMBER
+  LIBRARIAN
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  BLOCKED
+  SUSPENDED
+  PENDING_VERIFICATION
+}
+
+enum SettingType {
+  STRING
+  NUMBER
+  BOOLEAN
+  JSON
+}
+
+enum BookCopyStatus {
+  AVAILABLE
+  BORROWED
+  RESERVED
+  LOST
+  DAMAGED
+  MAINTENANCE
+  ARCHIVED
+}
+
+enum BookCopyCondition {
+  NEW
+  GOOD
+  FAIR
+  POOR
+  DAMAGED
+}
+
+model User {
+  id                  String                    @id @default(uuid()) @db.Uuid
+  fullName            String
+  email               String                    @unique
+  passwordHash        String
+  phone               String?
+  role                UserRole                  @default(MEMBER)
+  status              UserStatus                @default(PENDING_VERIFICATION)
+  preferredLanguage   String                    @default("en")
+  profileImageUrl     String?
+  membershipNumber    String                    @unique
+  qrCodeValue         String                    @unique
+  emailVerifiedAt     DateTime?
+  lastLoginAt         DateTime?
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+  deletedAt           DateTime?
+  refreshTokens       RefreshToken[]
+  verificationTokens  EmailVerificationToken[]
+  passwordResetTokens PasswordResetToken[]
+  auditActions        AuditLog[]                @relation("AuditActor")
+  auditTargets        AuditLog[]                @relation("AuditTarget")
+
+  @@index([status])
+  @@index([role])
+  @@index([deletedAt])
+}
+
+model RefreshToken {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  replacedBy String?  @db.Uuid
+  deviceInfo String?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  lastUsedAt DateTime?
+  user       User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId, expiresAt])
+  @@index([revokedAt])
+}
+
+model EmailVerificationToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique
+  expiresAt DateTime
+  consumedAt DateTime?
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId, expiresAt])
+}
+
+model PasswordResetToken {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId, expiresAt])
+}
+
+model AuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  actorId     String?  @db.Uuid
+  targetUserId String? @db.Uuid
+  action      String
+  entityType  String
+  entityId    String?
+  oldValues   Json?
+  newValues   Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+  actor       User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  targetUser  User?    @relation("AuditTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+
+  @@index([actorId, createdAt])
+  @@index([entityType, entityId])
+}
+
+model SystemSetting {
+  id          String      @id @default(uuid()) @db.Uuid
+  key         String      @unique
+  value       Json
+  description String?
+  type        SettingType @default(STRING)
+  isPublic    Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model Category {
+  id String @id @default(uuid()) @db.Uuid
+  nameEn String
+  nameAr String
+  slug String @unique
+  descriptionEn String?
+  descriptionAr String?
+  isArchived Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  books Book[]
+  @@index([isArchived, deletedAt])
+  @@unique([nameEn, nameAr])
+}
+model Author {
+  id String @id @default(uuid()) @db.Uuid
+  name String
+  nameAr String?
+  biography String?
+  biographyAr String?
+  imageUrl String?
+  birthDate DateTime?
+  deathDate DateTime?
+  nationality String?
+  isArchived Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  bookAuthors BookAuthor[]
+  @@index([isArchived, deletedAt])
+  @@unique([name, nameAr])
+}
+model Publisher {
+  id String @id @default(uuid()) @db.Uuid
+  name String @unique
+  nameAr String?
+  website String?
+  description String?
+  descriptionAr String?
+  isArchived Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  books Book[]
+  @@index([isArchived, deletedAt])
+}
+model LibrarySection {
+  id String @id @default(uuid()) @db.Uuid
+  nameEn String
+  nameAr String
+  descriptionEn String?
+  descriptionAr String?
+  floor String
+  room String?
+  code String @unique
+  isArchived Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  shelves Shelf[]
+  copies BookCopy[]
+  @@index([isArchived, deletedAt])
+}
+model Shelf {
+  id String @id @default(uuid()) @db.Uuid
+  sectionId String @db.Uuid
+  code String
+  nameEn String
+  nameAr String
+  descriptionEn String?
+  descriptionAr String?
+  isArchived Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  section LibrarySection @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  copies BookCopy[]
+  @@unique([sectionId, code])
+  @@index([isArchived, deletedAt])
+}
+model Book {
+  id String @id @default(uuid()) @db.Uuid
+  title String
+  titleAr String?
+  subtitle String?
+  subtitleAr String?
+  slug String @unique
+  isbn10 String? @unique
+  isbn13 String? @unique
+  description String?
+  descriptionAr String?
+  coverImageUrl String?
+  publicationYear Int?
+  edition String?
+  language String @default("en")
+  pageCount Int?
+  publisherId String? @db.Uuid
+  categoryId String @db.Uuid
+  averageRating Float @default(0)
+  ratingsCount Int @default(0)
+  totalCopies Int @default(0)
+  availableCopies Int @default(0)
+  borrowCount Int @default(0)
+  isFeatured Boolean @default(false)
+  isArchived Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  publisher Publisher? @relation(fields: [publisherId], references: [id], onDelete: Restrict)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  authors BookAuthor[]
+  copies BookCopy[]
+  @@index([isArchived, deletedAt, title])
+  @@index([categoryId, language])
+}
+model BookAuthor {
+  bookId String @db.Uuid
+  authorId String @db.Uuid
+  createdAt DateTime @default(now())
+  book Book @relation(fields: [bookId], references: [id], onDelete: Restrict)
+  author Author @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  @@id([bookId, authorId])
+  @@index([authorId])
+}
+model BookCopy {
+  id String @id @default(uuid()) @db.Uuid
+  bookId String @db.Uuid
+  copyCode String @unique
+  barcode String? @unique
+  qrCodeValue String @unique
+  sectionId String @db.Uuid
+  shelfId String @db.Uuid
+  status BookCopyStatus @default(AVAILABLE)
+  condition BookCopyCondition @default(GOOD)
+  acquisitionDate DateTime?
+  acquisitionPrice Decimal? @db.Decimal(10,2)
+  notes String?
+  isArchived Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  book Book @relation(fields: [bookId], references: [id], onDelete: Restrict)
+  section LibrarySection @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  shelf Shelf @relation(fields: [shelfId], references: [id], onDelete: Restrict)
+  @@index([bookId, status, isArchived])
+  @@index([sectionId, shelfId])
+}

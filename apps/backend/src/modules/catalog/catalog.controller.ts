@@ -1,0 +1,198 @@
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { UserRole } from '@prisma/client';
+import { CurrentUser, Public, Roles } from '../../common/auth.decorators';
+import { JwtAuthGuard, OptionalJwtAuthGuard, RolesGuard } from '../../common/auth.guards';
+import { CatalogService } from './catalog.service';
+import {
+  CopyStatusDto,
+  CreateBookDto,
+  CreateCopyDto,
+  UpdateBookDto,
+  UpdateCopyDto,
+} from './catalog.dto';
+@ApiTags('Catalog')
+@Controller()
+export class CatalogController {
+  constructor(private readonly catalog: CatalogService) {}
+  @Public()
+  @UseGuards(OptionalJwtAuthGuard)
+  @ApiQuery({
+    name: 'archiveState',
+    required: false,
+    enum: ['active', 'archived', 'all'],
+    description: 'Archived states require LIBRARIAN or ADMIN.',
+  })
+  @ApiQuery({
+    name: 'includeArchived',
+    required: false,
+    type: Boolean,
+    description: 'Equivalent to archiveState=all for authorized managers.',
+  })
+  @Get('books')
+  books(
+    @Query()
+    query: {
+      q?: string;
+      categoryId?: string;
+      language?: string;
+      available?: string;
+      sort?: string;
+      page?: string;
+      limit?: string;
+      includeArchived?: string;
+      archiveState?: 'active' | 'archived' | 'all';
+    },
+    @CurrentUser() user?: { role: UserRole },
+  ) {
+    return this.catalog.listBooks(query, user);
+  }
+  @Public() @Get('books/search') search(
+    @Query() query: { q?: string; page?: string; limit?: string },
+  ) {
+    return this.catalog.listBooks(query);
+  }
+  @Public() @Get('books/slug/:slug') bySlug(@Param('slug') slug: string) {
+    return this.catalog.book(slug, true);
+  }
+  @Public() @Get('books/:id') byId(@Param('id') id: string) {
+    return this.catalog.book(id);
+  }
+  @Public() @Get('books/:id/availability') async availability(@Param('id') id: string) {
+    const book = await this.catalog.book(id);
+    return book
+      ? {
+          totalCopies: book.totalCopies,
+          availableCopies: book.availableCopies,
+          locations: book.copies
+            .filter((copy) => copy.status === 'AVAILABLE')
+            .map((copy) => `${copy.section.floor} → ${copy.section.nameEn} → ${copy.shelf.code}`),
+        }
+      : null;
+  }
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.LIBRARIAN, UserRole.ADMIN)
+  @Post('books')
+  createBook(@Body() dto: CreateBookDto, @CurrentUser() user: { id: string }) {
+    return this.catalog.createBook(dto, user);
+  }
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.LIBRARIAN, UserRole.ADMIN)
+  @Patch('books/:id')
+  updateBook(
+    @Param('id') id: string,
+    @Body() dto: Partial<UpdateBookDto>,
+    @CurrentUser() user: { id: string },
+  ) {
+    return this.catalog.updateBook(id, dto, user);
+  }
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.LIBRARIAN, UserRole.ADMIN)
+  @ApiQuery({ name: 'archiveState', required: false, enum: ['active', 'archived', 'all'] })
+  @ApiQuery({
+    name: 'q',
+    required: false,
+    description: 'Copy code, barcode, QR value, or book title.',
+  })
+  @ApiQuery({ name: 'bookId', required: false })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: ['AVAILABLE', 'BORROWED', 'RESERVED', 'LOST', 'DAMAGED', 'MAINTENANCE', 'ARCHIVED'],
+  })
+  @ApiQuery({
+    name: 'condition',
+    required: false,
+    enum: ['NEW', 'GOOD', 'FAIR', 'POOR', 'DAMAGED'],
+  })
+  @ApiQuery({ name: 'sectionId', required: false })
+  @ApiQuery({ name: 'shelfId', required: false })
+  @Get('book-copies')
+  copies(
+    @Query()
+    query: {
+      q?: string;
+      bookId?: string;
+      status?: import('@prisma/client').BookCopyStatus;
+      condition?: import('@prisma/client').BookCopyCondition;
+      sectionId?: string;
+      shelfId?: string;
+      includeArchived?: string;
+      archiveState?: 'active' | 'archived' | 'all';
+      page?: string;
+      limit?: string;
+    },
+  ) {
+    return this.catalog.listCopies(query);
+  }
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.LIBRARIAN, UserRole.ADMIN)
+  @Post('book-copies')
+  createCopy(@Body() dto: CreateCopyDto, @CurrentUser() user: { id: string }) {
+    return this.catalog.createCopy(dto, user);
+  }
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.LIBRARIAN, UserRole.ADMIN)
+  @Patch('book-copies/:id')
+  updateCopy(
+    @Param('id') id: string,
+    @Body() dto: Partial<UpdateCopyDto>,
+    @CurrentUser() user: { id: string },
+  ) {
+    return this.catalog.updateCopy(id, dto, user);
+  }
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.LIBRARIAN, UserRole.ADMIN)
+  @Patch('book-copies/:id/status')
+  status(@Param('id') id: string, @Body() dto: CopyStatusDto, @CurrentUser() user: { id: string }) {
+    return this.catalog.updateCopyStatus(id, dto.status, user);
+  }
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.LIBRARIAN, UserRole.ADMIN)
+  @Post('book-copies/:id/archive')
+  archiveCopy(@Param('id') id: string, @CurrentUser() user: { id: string }) {
+    return this.catalog.archiveCopy(id, user);
+  }
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.LIBRARIAN, UserRole.ADMIN)
+  @Post('book-copies/:id/restore')
+  restoreCopy(@Param('id') id: string, @CurrentUser() user: { id: string }) {
+    return this.catalog.restoreCopy(id, user);
+  }
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.LIBRARIAN, UserRole.ADMIN)
+  @Get('book-copies/:id/qr')
+  qr(@Param('id') id: string) {
+    return this.catalog.copyQr(id);
+  }
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.LIBRARIAN, UserRole.ADMIN)
+  @Get('book-copies/:id')
+  copy(@Param('id') id: string) {
+    return this.catalog.copy(id);
+  }
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.LIBRARIAN, UserRole.ADMIN)
+  @Post('books/:id/archive')
+  archive(@Param('id') id: string, @CurrentUser() user: { id: string }) {
+    return this.catalog.archiveBook(id, user);
+  }
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.LIBRARIAN, UserRole.ADMIN)
+  @Post('books/:id/restore')
+  restore(@Param('id') id: string, @CurrentUser() user: { id: string }) {
+    return this.catalog.restoreBook(id, user);
+  }
+}
