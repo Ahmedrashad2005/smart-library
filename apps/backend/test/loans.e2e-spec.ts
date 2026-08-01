@@ -116,6 +116,7 @@ describe('Phase 4 borrowing lifecycle', () => {
       .set('Authorization', `Bearer ${librarian}`)
       .send({ memberId: borrower.id, bookCopyId: copy.id });
     expect(borrowed.status).toBe(201);
+    expect(borrowed.body.bookCopy.status).toBe(BookCopyStatus.BORROWED);
     expect(
       new Date(borrowed.body.dueAt).getTime() - new Date(borrowed.body.borrowedAt).getTime(),
     ).toBeGreaterThan(13 * 86_400_000);
@@ -127,6 +128,7 @@ describe('Phase 4 borrowing lifecycle', () => {
       .set('Authorization', `Bearer ${librarian}`)
       .send({ returnCondition: 'GOOD' });
     expect(returned.status).toBe(201);
+    expect(returned.body.bookCopy.status).toBe(BookCopyStatus.AVAILABLE);
     expect(
       (await prisma.book.findUniqueOrThrow({ where: { id: copy.bookId } })).availableCopies,
     ).toBe(before.availableCopies);
@@ -137,7 +139,7 @@ describe('Phase 4 borrowing lifecycle', () => {
           .set('Authorization', `Bearer ${librarian}`)
           .send({ returnCondition: 'GOOD' })
       ).status,
-    ).toBe(400);
+    ).toBe(409);
     expect(
       await prisma.auditLog.count({ where: { entityType: 'loan', entityId: borrowed.body.id } }),
     ).toBeGreaterThanOrEqual(2);
@@ -189,7 +191,7 @@ describe('Phase 4 borrowing lifecycle', () => {
           .set('Authorization', `Bearer ${librarian}`)
           .send({ memberId: borrower.id, bookCopyId: unavailable.id })
       ).status,
-    ).toBe(400);
+    ).toBe(409);
     const copy = await availableCopy();
     await prisma.book.update({ where: { id: copy.bookId }, data: { isArchived: true } });
     expect(
@@ -218,6 +220,7 @@ describe('Phase 4 borrowing lifecycle', () => {
       where: { email: 'member13@smart-library.test' },
     });
     const copy = await availableCopy();
+    const before = await prisma.book.findUniqueOrThrow({ where: { id: copy.bookId } });
     const attempt = () =>
       api()
         .post('/api/v1/loans/borrow')
@@ -227,7 +230,23 @@ describe('Phase 4 borrowing lifecycle', () => {
     const success = results.find((result) => result.status === 201);
     expect(success).toBeDefined();
     expect(results.filter((result) => result.status === 201)).toHaveLength(1);
-    expect(results.filter((result) => result.status !== 201)).toHaveLength(1);
+    expect(results.filter((result) => result.status === 409)).toHaveLength(1);
+    expect(
+      await prisma.loan.count({
+        where: { bookCopyId: copy.id, returnedAt: null, status: LoanStatus.ACTIVE },
+      }),
+    ).toBe(1);
+    expect((await prisma.bookCopy.findUniqueOrThrow({ where: { id: copy.id } })).status).toBe(
+      BookCopyStatus.BORROWED,
+    );
+    expect(
+      (await prisma.book.findUniqueOrThrow({ where: { id: copy.bookId } })).availableCopies,
+    ).toBe(before.availableCopies - 1);
+    expect(
+      await prisma.auditLog.count({
+        where: { action: 'LOAN_CREATED', entityType: 'loan', entityId: success!.body.id },
+      }),
+    ).toBe(1);
     await api()
       .post(`/api/v1/loans/${success!.body.id}/return`)
       .set('Authorization', `Bearer ${librarian}`)
@@ -249,6 +268,7 @@ describe('Phase 4 borrowing lifecycle', () => {
       .set('Authorization', `Bearer ${librarian}`)
       .send({ returnCondition: 'DAMAGED', returnNotes: 'Damaged during use' });
     expect(returned.status).toBe(201);
+    expect(returned.body.bookCopy.status).toBe(BookCopyStatus.DAMAGED);
     expect((await prisma.bookCopy.findUniqueOrThrow({ where: { id: copy.id } })).status).toBe(
       BookCopyStatus.DAMAGED,
     );
@@ -329,7 +349,8 @@ describe('Phase 4 borrowing lifecycle', () => {
       arabicName: expect.anything(),
     });
     expect(mineItem.member.passwordHash).toBeUndefined();
-    expect(mineItem.issuedBy.passwordHash).toBeUndefined();
+    expect(mineItem.issuedBy).toBeUndefined();
+    expect(mineItem.returnedBy).toBeUndefined();
     expect(mineItem).not.toHaveProperty('auditLogs');
     const detail = await api()
       .get(`/api/v1/loans/${own.id}`)

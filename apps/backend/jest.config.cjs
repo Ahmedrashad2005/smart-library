@@ -5,5 +5,6 @@ module.exports = {
   transform: { '^.+\\.(t|j)s$': 'ts-jest' },
   collectCoverageFrom: ['src/**/*.(t|j)s'],
   testEnvironment: 'node',
+  maxWorkers: 1,
   setupFiles: ['<rootDir>/test/setup.ts'],
 };

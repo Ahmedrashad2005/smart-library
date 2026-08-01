@@ -66,4 +66,38 @@ describe('loan routes in the real application router', () => {
     await signIn('MEMBER');
     expect(await screen.findByRole('heading', { name: 'My loans' })).toBeInTheDocument();
   });
+  it('opens the return route while preserving the selected-loan query', async () => {
+    const loan = {
+      id: 'loan-return-route',
+      status: 'ACTIVE',
+      borrowedAt: '2026-08-01T00:00:00Z',
+      dueAt: '2026-08-15T00:00:00Z',
+      renewedCount: 0,
+      member: { id: 'member', fullName: 'Member', email: 'member@test.local' },
+      bookCopy: {
+        id: 'copy',
+        copyCode: 'COPY-RETURN',
+        status: 'BORROWED',
+        condition: 'GOOD',
+        book: { id: 'book', title: 'Return Route Book', authors: [] },
+      },
+    };
+    mockedApi.mockImplementation(async (path: string) => {
+      if (path === '/auth/login')
+        return { accessToken: 'token', user: { role: 'LIBRARIAN', fullName: 'Staff' } };
+      if (path === '/loans/loan-return-route') return loan;
+      return { items: [loan], page: 1, totalPages: 1, total: 1, limit: 10 };
+    });
+    const user = userEvent.setup();
+    renderAt('/librarian/loans');
+    await signIn('LIBRARIAN');
+    await user.click(await screen.findByRole('button', { name: 'Return' }));
+
+    expect(await screen.findByRole('heading', { name: 'Return a copy' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/librarian/returns');
+    expect(window.location.search).toBe('?loan=loan-return-route');
+    expect(
+      await screen.findByRole('heading', { name: 'Return Route Book — COPY-RETURN' }),
+    ).toBeInTheDocument();
+  });
 });

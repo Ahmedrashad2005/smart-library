@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -112,7 +113,7 @@ export class LoansService {
             include: { book: true },
           });
           if (locked.status !== BookCopyStatus.AVAILABLE)
-            throw new BadRequestException('Book copy is not available');
+            throw new ConflictException('Book copy is not available');
           const active = await tx.loan.findMany({
             where: { memberId: member.id, returnedAt: null },
             select: { bookCopyId: true, dueAt: true },
@@ -123,6 +124,11 @@ export class LoansService {
             throw new BadRequestException('Member has reached the active loan limit');
           if (active.some((loan) => loan.bookCopyId === locked.id))
             throw new BadRequestException('Member already has this copy on loan');
+          await tx.bookCopy.update({
+            where: { id: locked.id },
+            data: { status: BookCopyStatus.BORROWED },
+          });
+          await this.sync(locked.bookId, tx);
           const loan = await tx.loan.create({
             data: {
               memberId: member.id,
@@ -132,11 +138,6 @@ export class LoansService {
             },
             include: loanInclude,
           });
-          await tx.bookCopy.update({
-            where: { id: locked.id },
-            data: { status: BookCopyStatus.BORROWED },
-          });
-          await this.sync(locked.bookId, tx);
           await tx.auditLog.create({
             data: {
               action: 'LOAN_CREATED',
@@ -164,8 +165,8 @@ export class LoansService {
       this.prisma.$transaction(
         async (tx) => {
           const loan = await tx.loan.findUnique({ where: { id }, include: loanInclude });
-          if (!loan || loan.returnedAt)
-            throw new BadRequestException('Loan is not eligible for return');
+          if (!loan) throw new NotFoundException('Loan not found');
+          if (loan.returnedAt) throw new ConflictException('Loan was already returned');
           await tx.$queryRaw`SELECT "id" FROM "BookCopy" WHERE "id" = CAST(${loan.bookCopyId} AS uuid) FOR UPDATE`;
           const copy = await tx.bookCopy.findUnique({ where: { id: loan.bookCopyId } });
           if (!copy) throw new NotFoundException('Book copy not found');
@@ -173,6 +174,11 @@ export class LoansService {
             dto.returnCondition === BookCopyCondition.DAMAGED
               ? BookCopyStatus.DAMAGED
               : BookCopyStatus.AVAILABLE;
+          await tx.bookCopy.update({
+            where: { id: copy.id },
+            data: { condition: dto.returnCondition, status: nextStatus },
+          });
+          await this.sync(copy.bookId, tx);
           const returned = await tx.loan.update({
             where: { id },
             data: {
@@ -184,11 +190,6 @@ export class LoansService {
             },
             include: loanInclude,
           });
-          await tx.bookCopy.update({
-            where: { id: copy.id },
-            data: { condition: dto.returnCondition, status: nextStatus },
-          });
-          await this.sync(copy.bookId, tx);
           await tx.auditLog.create({
             data: {
               action: 'LOAN_RETURNED',
@@ -237,7 +238,7 @@ export class LoansService {
               newValues: { dueAt: renewed.dueAt.toISOString(), renewedCount: renewed.renewedCount },
             },
           });
-          return this.present(renewed);
+          return this.present(renewed, actor.role !== UserRole.MEMBER);
         },
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       ),
@@ -295,7 +296,7 @@ export class LoansService {
       this.prisma.loan.count({ where }),
     ]);
     return {
-      items: items.map((loan) => this.present(loan)),
+      items: items.map((loan) => this.present(loan, !memberId)),
       total,
       page,
       limit: take,
@@ -307,7 +308,7 @@ export class LoansService {
     if (!loan) throw new NotFoundException('Loan not found');
     if (actor.role === UserRole.MEMBER && loan.memberId !== actor.id)
       throw new ForbiddenException('Members can view only their own loans');
-    return this.present(loan);
+    return this.present(loan, actor.role !== UserRole.MEMBER);
   }
   private async sync(bookId: string, tx: Prisma.TransactionClient) {
     const copies = await tx.bookCopy.findMany({
@@ -322,10 +323,12 @@ export class LoansService {
       },
     });
   }
-  private present(loan: LoanRecord) {
+  private present(loan: LoanRecord, includeStaff = true) {
+    const { issuedBy, returnedBy, ...safeLoan } = loan;
     return {
-      ...loan,
+      ...safeLoan,
       status: this.effectiveStatus(loan),
+      ...(includeStaff ? { issuedBy, returnedBy } : {}),
       bookCopy: {
         ...loan.bookCopy,
         book: {

@@ -91,7 +91,7 @@ function pathNow(): string {
 }
 function navigate(to: string, setPath: (path: string) => void): void {
   window.history.pushState({}, '', to);
-  setPath(to);
+  setPath(pathNow());
 }
 function bookTitle(book: Book): string {
   return document.documentElement.dir === 'rtl' ? book.titleAr || book.title : book.title;

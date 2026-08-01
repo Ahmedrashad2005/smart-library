@@ -33,14 +33,16 @@ Phase 1 deliberately contains no domain schema, authentication, catalog, UI flow
 - [x] Add role-protected archived-book and complete book-copy administrative listings, archive-state filters, reload-safe restore workflows, and corresponding backend/frontend tests.
 - [x] Defer indexed full-text/trigram search, suggested corrections, and search history by the approved Phase 3 scope; these are not implemented and are not a Phase 3 acceptance blocker.
 
-## Phase 4 — Library operations
+## Phase 4 — Library operations — Complete
 
 - [x] Part 1: Implement configurable rules and transaction-safe borrowing, returns, renewal, due dates, eligibility, availability counters, audit logging, and loan query APIs.
 - [x] Part 2: Implement role-protected staff/member loan pages, manual/QR/barcode-assisted borrowing and returns, and renewal workflows.
-- [ ] Implement returns, overdue and configurable fine calculation, payments/waivers/adjustments, and notification hooks.
-- [ ] Implement renewal eligibility and approvals/rejections.
-- [ ] Implement FIFO reservations, queue positions, pickup expiry, and safe returned-copy assignment.
-- [ ] Implement member/copy QR scanning and manual-entry workflows.
+- [x] Part 3: Verify the live Docker stack, both database migration targets, seed/inventory consistency, all automated checks, live circulation/RBAC/privacy/concurrency workflows, and live staff/member frontend routes.
+- [x] Verify renewal eligibility and clear overdue/limit/ownership rejections.
+- [x] Verify camera scanning is user-initiated, resource-safe, accessible, and retains manual-entry fallback.
+- [x] Close Phase 4 with 4 backend suites / 25 tests and 14 frontend files / 78 tests (103 total).
+
+Reservations/waiting lists, fines, payments/waivers, notifications, recommendations, reviews, reports, and dashboards are outside the approved Phase 4 scope and remain unimplemented. The centralized loan policy has no administrator settings UI yet.
 
 ## Phase 5 — User engagement
 

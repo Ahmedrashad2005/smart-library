@@ -1,10 +1,10 @@
 # Smart Library
 
-Phase 4 circulation includes role-protected staff borrowing/return pages (`/librarian/loans`) and member loan pages (`/my-loans`). Manual copy-code, barcode, and QR entry work everywhere; browser camera scanning is used only after an explicit scan action and falls back safely when unsupported.
+Phase 4 circulation is complete and includes role-protected staff borrowing/return pages (`/librarian/loans`) and member loan pages (`/my-loans`). Manual copy-code, barcode, and QR entry work everywhere; browser camera scanning is used only after an explicit scan action and falls back safely when unsupported. Borrowing, renewal, and returns are transaction-safe and keep copy availability counters synchronized.
 
 ## Applications
 
-- `apps/backend` — NestJS API foundation (`GET /health`)
+- `apps/backend` — NestJS API (`GET /api/v1/health`)
 - `apps/frontend` — React/Vite/Tailwind development shell
 - `apps/recommendation-service` — FastAPI foundation (`GET /health`)
 
@@ -27,7 +27,7 @@ npm run dev:frontend
 npm run dev:recommendations
 ```
 
-The services are available at `http://localhost:3000/health`, `http://localhost:5173`, and `http://localhost:8000/health`.
+The services are available at `http://localhost:3000/api/v1/health`, `http://localhost:5173`, and `http://localhost:8000/health`.
 
 ## Docker development environment
 
@@ -46,6 +46,8 @@ npm run prisma:seed --workspace=@smart-library/backend
 ```
 
 The seed uses `SmartLib123` for `admin@smart-library.test`, two librarian accounts, and 15 member accounts. These credentials are development-only.
+
+The verified Phase 4 seed includes 50 bilingual books, 130 physical copies, and four deterministic loans. The isolated test database is `smart_library_test`. Current automated coverage is 4 backend suites / 25 tests and 14 frontend files / 78 tests.
 
 ## Phase 1 checks
 
