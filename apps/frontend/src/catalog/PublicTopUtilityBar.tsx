@@ -1,5 +1,8 @@
+import { useState } from 'react';
+import type { KeyboardEvent } from 'react';
 import type { PublicLocale, PublicSession } from './public.types';
 import { PublicIcon } from './PublicIcon';
+import { UtilityHeaderItem } from './UtilityHeaderItem';
 
 type Props = {
   locale: PublicLocale;
@@ -11,26 +14,40 @@ type Props = {
 
 const copy = {
   ar: {
-    language: 'العربية',
+    language: 'English',
     favorites: 'المفضلة',
-    account: 'حسابي',
-    offers: 'عروض الأسبوع',
-    tracking: 'متابعة الإعارات',
+    account: 'ادخل لحسابك أو سجل الآن',
+    orders: 'طلباتي',
+    services: 'خدمات نَوَى',
     help: 'المساعدة',
-    location: 'متاح في: الرياض',
-    signOut: 'خروج',
-    unavailable: 'ستتوفر في مرحلة لاحقة',
+    branches: 'فروعنا',
+    location: 'حدد موقعك للتوصيل',
+    signOut: 'تسجيل الخروج',
+    comingSoon: 'قريبًا',
+    accountMenu: 'قائمة الحساب',
+    accountArea: 'الذهاب إلى حسابي',
+    servicesMenu: 'قائمة خدمات نَوَى',
+    books: 'الكتب',
+    borrowing: 'الاستعارة',
+    categories: 'الأقسام',
   },
   en: {
-    language: 'English',
+    language: 'العربية',
     favorites: 'Favorites',
-    account: 'My account',
-    offers: 'Weekly picks',
-    tracking: 'Track loans',
+    account: 'Sign in or create an account',
+    orders: 'My loans',
+    services: 'NAWA services',
     help: 'Help',
-    location: 'Available in: Riyadh',
+    branches: 'Branches',
+    location: 'Choose your delivery location',
     signOut: 'Sign out',
-    unavailable: 'Available in a later phase',
+    comingSoon: 'Coming soon',
+    accountMenu: 'Account menu',
+    accountArea: 'Go to my account',
+    servicesMenu: 'NAWA services menu',
+    books: 'Books',
+    borrowing: 'Borrowing',
+    categories: 'Categories',
   },
 } as const;
 
@@ -41,6 +58,8 @@ export function PublicTopUtilityBar({
   onLanguageChange,
   onSignOut,
 }: Props): JSX.Element {
+  const [servicesOpen, setServicesOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const labels = copy[locale];
   const accountPath =
     session?.role === 'ADMIN'
@@ -48,56 +67,129 @@ export function PublicTopUtilityBar({
       : session?.role === 'LIBRARIAN'
         ? '/librarian/books'
         : '/my-loans';
+  const closeMenus = () => {
+    setServicesOpen(false);
+    setAccountOpen(false);
+  };
+  const navigate = (to: string) => {
+    closeMenus();
+    go(to);
+    if (to.includes('#categories'))
+      window.setTimeout(() => document.getElementById('categories')?.scrollIntoView?.(), 0);
+  };
+  const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (event.key === 'Escape') closeMenus();
+  };
 
   return (
-    <div className="public-utility">
-      <div className="public-utility__inner">
-        <div className="public-utility__group">
-          <button
-            className="utility-action"
-            title={locale === 'ar' ? 'Switch language to English' : 'تغيير اللغة إلى العربية'}
-            onClick={onLanguageChange}
-          >
-            <PublicIcon name="globe" />
-            <span>{labels.language}</span>
-            <span aria-hidden="true" className="utility-chevron">
-              ⌄
-            </span>
-          </button>
-          <span className="utility-divider" aria-hidden="true" />
-          <span className="utility-static" title={labels.unavailable}>
-            <PublicIcon name="heart" />
-            {labels.favorites}
-          </span>
-          <span className="utility-divider" aria-hidden="true" />
-          <button className="utility-action" onClick={() => go(accountPath)}>
-            <PublicIcon name="account" />
-            <span>{session?.fullName || labels.account}</span>
-          </button>
-          {session && (
-            <button className="utility-signout" onClick={onSignOut}>
-              {labels.signOut}
-            </button>
+    <div className="public-utility" onKeyDown={handleKeyDown}>
+      <nav className="public-utility__inner" aria-label={labels.servicesMenu}>
+        <div className="utility-slot utility-slot--account">
+          <UtilityHeaderItem
+            icon="account"
+            label={session?.fullName || labels.account}
+            expanded={session ? accountOpen : undefined}
+            controls={session ? 'utility-account-menu' : undefined}
+            onClick={() => (session ? setAccountOpen((open) => !open) : navigate(accountPath))}
+          />
+          {session && accountOpen && (
+            <div
+              id="utility-account-menu"
+              className="utility-popover"
+              role="menu"
+              aria-label={labels.accountMenu}
+            >
+              <button type="button" role="menuitem" onClick={() => navigate(accountPath)}>
+                <PublicIcon name="account" />
+                {labels.accountArea}
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  closeMenus();
+                  onSignOut();
+                }}
+              >
+                <PublicIcon name="return" />
+                {labels.signOut}
+              </button>
+            </div>
           )}
         </div>
-        <div className="public-utility__group public-utility__support">
-          <span className="utility-offer" title={labels.unavailable}>
-            {labels.offers}
-          </span>
-          <button className="utility-action" onClick={() => go('/my-loans')}>
-            <PublicIcon name="history" />
-            {labels.tracking}
-          </button>
-          <span className="utility-static" title={labels.unavailable}>
-            <PublicIcon name="help" />
-            {labels.help}
-          </span>
-          <span className="utility-static">
-            <PublicIcon name="delivery" />
-            {labels.location}
-          </span>
+
+        <div className="utility-slot utility-slot--favorites">
+          <UtilityHeaderItem
+            icon="heart"
+            label={labels.favorites}
+            title={labels.comingSoon}
+            suffix={
+              <>
+                <span className="utility-count" aria-label="0">
+                  0
+                </span>
+                <span className="sr-only">— {labels.comingSoon}</span>
+              </>
+            }
+          />
         </div>
-      </div>
+
+        <div className="utility-slot utility-slot--orders">
+          <UtilityHeaderItem
+            icon="delivery"
+            label={labels.orders}
+            onClick={() => navigate('/my-loans')}
+          />
+        </div>
+
+        <div className="utility-slot utility-slot--services">
+          <UtilityHeaderItem
+            icon="categories"
+            label={labels.services}
+            expanded={servicesOpen}
+            controls="utility-services-menu"
+            onClick={() => setServicesOpen((open) => !open)}
+            suffix={<PublicIcon name="chevron" />}
+          />
+          {servicesOpen && (
+            <div
+              id="utility-services-menu"
+              className="utility-popover"
+              role="menu"
+              aria-label={labels.servicesMenu}
+            >
+              <button type="button" role="menuitem" onClick={() => navigate('/books')}>
+                <PublicIcon name="book" />
+                {labels.books}
+              </button>
+              <button type="button" role="menuitem" onClick={() => navigate('/my-loans')}>
+                <PublicIcon name="history" />
+                {labels.borrowing}
+              </button>
+              <button type="button" role="menuitem" onClick={() => navigate('/books#categories')}>
+                <PublicIcon name="categories" />
+                {labels.categories}
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="utility-slot utility-slot--help">
+          <UtilityHeaderItem icon="help" label={labels.help} title={labels.comingSoon} />
+        </div>
+
+        <div className="utility-slot utility-slot--branches">
+          <UtilityHeaderItem icon="location" label={labels.branches} title={labels.comingSoon} />
+        </div>
+
+        <div className="utility-slot utility-slot--location">
+          <UtilityHeaderItem icon="location" label={labels.location} />
+        </div>
+
+        <div className="utility-slot utility-slot--language">
+          <UtilityHeaderItem icon="globe" label={labels.language} onClick={onLanguageChange} />
+        </div>
+      </nav>
     </div>
   );
 }

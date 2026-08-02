@@ -3,11 +3,14 @@ export type PublicIconName =
   | 'arrow'
   | 'book'
   | 'categories'
+  | 'chevron'
   | 'delivery'
   | 'globe'
   | 'heart'
   | 'help'
   | 'history'
+  | 'location'
+  | 'menu'
   | 'offer'
   | 'quality'
   | 'return'
@@ -50,6 +53,7 @@ export function PublicIcon({ name }: { name: PublicIconName }): JSX.Element {
         <rect x="14" y="14" width="7" height="7" rx="1.5" />
       </>
     ),
+    chevron: <path d="m7 10 5 5 5-5" />,
     delivery: (
       <>
         <path d="M3 6h11v11H3zM14 10h4l3 3v4h-7z" />
@@ -78,6 +82,17 @@ export function PublicIcon({ name }: { name: PublicIconName }): JSX.Element {
       <>
         <circle cx="12" cy="12" r="9" />
         <path d="M12 7v5l3 2M3.5 7H7V3.5" />
+      </>
+    ),
+    location: (
+      <>
+        <path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z" />
+        <circle cx="12" cy="10" r="2.5" />
+      </>
+    ),
+    menu: (
+      <>
+        <path d="M4 7h16M4 12h16M4 17h16" />
       </>
     ),
     offer: (

@@ -93,10 +93,10 @@ describe('loan RTL and accessibility behavior', () => {
 
     expect(document.documentElement).toHaveAttribute('dir', 'ltr');
     expect(document.documentElement).toHaveAttribute('lang', 'en');
-    await user.click(screen.getByRole('button', { name: 'English' }));
+    await user.click(screen.getByRole('button', { name: 'العربية' }));
     expect(document.documentElement).toHaveAttribute('dir', 'rtl');
     expect(document.documentElement).toHaveAttribute('lang', 'ar');
-    await user.click(screen.getByRole('button', { name: 'العربية' }));
+    await user.click(screen.getByRole('button', { name: 'English' }));
     expect(document.documentElement).toHaveAttribute('dir', 'ltr');
     expect(document.documentElement).toHaveAttribute('lang', 'en');
   });

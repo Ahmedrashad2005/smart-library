@@ -272,4 +272,23 @@ describe('PublicCatalog', () => {
     );
     expect(screen.getByLabelText('Search the NAWA catalog')).toHaveValue('knowledge');
   });
+
+  it('synchronizes a header category selection into the existing catalog filter', async () => {
+    successfulApi();
+    render(<PublicCatalog locale="en" go={vi.fn()} />);
+    await within(fullCatalogRegion()).findByRole('heading', { name: 'The Blue Book' });
+
+    window.history.pushState({}, '', '/books?categoryId=category-history');
+    window.dispatchEvent(new Event('nawa:navigation'));
+
+    await waitFor(() =>
+      expect(mockedApi).toHaveBeenCalledWith(
+        expect.stringContaining('categoryId=category-history'),
+      ),
+    );
+    expect(screen.getByRole('button', { name: 'Browse by category: History' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+  });
 });

@@ -1,7 +1,15 @@
 import { useState } from 'react';
 import type { FormEvent, KeyboardEvent } from 'react';
-import type { PublicLocale, PublicSession } from './public.types';
+import { apiRequest, requestMessage } from '../lib/api';
+import {
+  DeliveryLocationButton,
+  HeaderActionButton,
+  HeaderDropdownPill,
+  HeaderSearch,
+  NawaBrandLogo,
+} from './HeaderControls';
 import { PublicIcon } from './PublicIcon';
+import type { PublicCategory, PublicLocale, PublicSession } from './public.types';
 
 type Props = {
   locale: PublicLocale;
@@ -14,43 +22,53 @@ const copy = {
   ar: {
     home: 'الرئيسية',
     books: 'الكتب',
-    categories: 'الأقسام',
-    authors: 'المؤلفون',
-    publishers: 'دار النشر',
-    articles: 'المقالات',
-    search: 'ابحث عن كتاب، مؤلف أو موضوع...',
-    searchLabel: 'البحث في مكتبة نَوَى',
-    allCategories: 'جميع الأقسام',
-    menu: 'فتح قائمة التنقل',
+    categories: 'تصفح الأقسام',
+    allCategories: 'كل الأقسام',
+    brands: 'العلامات التجارية',
+    menu: 'فتح قائمة نَوَى',
+    closeMenu: 'إغلاق قائمة نَوَى',
     navigation: 'التنقل الرئيسي',
-    later: 'يتوفر في مرحلة لاحقة',
+    later: 'قريبًا — لا تتوفر تصفية العلامات التجارية حاليًا',
     workspace: 'مساحة العمل',
     myLoans: 'إعاراتي',
+    loadingCategories: 'جارٍ تحميل الأقسام…',
+    categoriesError: 'تعذر تحميل الأقسام.',
   },
   en: {
     home: 'Home',
     books: 'Books',
-    categories: 'Categories',
-    authors: 'Authors',
-    publishers: 'Publishers',
-    articles: 'Articles',
-    search: 'Search for a book, author, or topic...',
-    searchLabel: 'Search the NAWA library',
+    categories: 'Browse categories',
     allCategories: 'All categories',
-    menu: 'Open navigation menu',
+    brands: 'Brands',
+    menu: 'Open NAWA menu',
+    closeMenu: 'Close NAWA menu',
     navigation: 'Main navigation',
-    later: 'Available in a later phase',
+    later: 'Coming soon — brand filtering is not available yet',
     workspace: 'Workspace',
     myLoans: 'My loans',
+    loadingCategories: 'Loading categories…',
+    categoriesError: 'Categories could not be loaded.',
   },
 } as const;
 
 export function MainHeader({ locale, currentPath, session, go }: Props): JSX.Element {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [locationOpen, setLocationOpen] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState('');
+  const [categories, setCategories] = useState<PublicCategory[] | null>(null);
+  const [categoryLoading, setCategoryLoading] = useState(false);
+  const [categoryError, setCategoryError] = useState('');
   const [search, setSearch] = useState('');
   const labels = copy[locale];
-  const navigate = (to: string) => {
+
+  const closeMenus = () => {
     setMenuOpen(false);
+    setCategoryOpen(false);
+    setLocationOpen(false);
+  };
+  const navigate = (to: string) => {
+    closeMenus();
     go(to);
   };
   const submitSearch = (event: FormEvent) => {
@@ -62,86 +80,147 @@ export function MainHeader({ locale, currentPath, session, go }: Props): JSX.Ele
     navigate('/books#categories');
     window.setTimeout(() => document.getElementById('categories')?.scrollIntoView?.(), 0);
   };
+  const selectCategory = (categoryId: string) => {
+    navigate(`/books?categoryId=${encodeURIComponent(categoryId)}`);
+  };
+  const toggleCategories = () => {
+    const opening = !categoryOpen;
+    setCategoryOpen(opening);
+    setLocationOpen(false);
+    setMenuOpen(false);
+    if (!opening || categories !== null || categoryLoading) return;
+    setCategoryLoading(true);
+    setCategoryError('');
+    void apiRequest<PublicCategory[]>('/categories')
+      .then(setCategories)
+      .catch((reason: unknown) => setCategoryError(requestMessage(reason)))
+      .finally(() => setCategoryLoading(false));
+  };
   const current = (path: string) =>
     currentPath === path || (path !== '/' && currentPath.startsWith(`${path}/`))
       ? 'page'
       : undefined;
   const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
-    if (event.key === 'Escape') setMenuOpen(false);
+    if (event.key === 'Escape') closeMenus();
   };
 
   return (
     <div className="main-header" onKeyDown={handleKeyDown}>
       <div className="main-header__inner">
-        <button className="nawa-brand" onClick={() => navigate('/')} aria-label="NAWA home">
-          <img src="/brand/nawa-logo.png" alt="NAWA نَوَى brand logo" />
-        </button>
+        <NawaBrandLogo locale={locale} onHome={() => navigate('/')} />
 
         <button
           className="public-menu-button"
           type="button"
-          aria-label={labels.menu}
+          aria-label={menuOpen ? labels.closeMenu : labels.menu}
           aria-expanded={menuOpen}
-          aria-controls="public-navigation"
-          onClick={() => setMenuOpen((open) => !open)}
+          aria-controls="marketplace-mobile-navigation"
+          onClick={() => {
+            setMenuOpen((open) => !open);
+            setCategoryOpen(false);
+            setLocationOpen(false);
+          }}
         >
-          <span aria-hidden="true">☰</span>
+          <PublicIcon name="menu" />
         </button>
 
+        <DeliveryLocationButton
+          locale={locale}
+          selectedLocation={selectedLocation}
+          open={locationOpen}
+          onToggle={() => {
+            setLocationOpen((open) => !open);
+            setCategoryOpen(false);
+            setMenuOpen(false);
+          }}
+          onSelect={(location) => {
+            setSelectedLocation(location);
+            setLocationOpen(false);
+          }}
+        />
+
+        <HeaderSearch locale={locale} value={search} onChange={setSearch} onSubmit={submitSearch} />
+
+        <div className="header-dropdown--categories">
+          <HeaderDropdownPill
+            id="header-categories-menu"
+            label={labels.categories}
+            open={categoryOpen}
+            onToggle={toggleCategories}
+          >
+            <button type="button" role="menuitem" onClick={navigateToCategories}>
+              <PublicIcon name="categories" />
+              {labels.allCategories}
+            </button>
+            {categoryLoading && (
+              <p role="status" className="header-dropdown__status">
+                {labels.loadingCategories}
+              </p>
+            )}
+            {categoryError && (
+              <p role="alert" className="header-dropdown__status is-error">
+                {labels.categoriesError}
+              </p>
+            )}
+            {categories?.map((category) => (
+              <button
+                type="button"
+                role="menuitem"
+                key={category.id}
+                onClick={() => selectCategory(category.id)}
+              >
+                <PublicIcon name="book" />
+                {locale === 'ar' ? category.nameAr : category.nameEn}
+              </button>
+            ))}
+          </HeaderDropdownPill>
+        </div>
+
+        <div className="header-dropdown--brands">
+          <HeaderDropdownPill
+            id="header-brands-menu"
+            label={labels.brands}
+            open={false}
+            onToggle={() => undefined}
+            disabled
+            disabledReason={labels.later}
+          />
+        </div>
+
+        <HeaderActionButton locale={locale} onClick={() => navigate('/my-loans')} />
+
         <nav
-          id="public-navigation"
-          className={`public-navigation${menuOpen ? ' is-open' : ''}`}
+          id="marketplace-mobile-navigation"
+          className={`marketplace-mobile-nav${menuOpen ? ' is-open' : ''}`}
           aria-label={labels.navigation}
         >
           <button aria-current={current('/')} onClick={() => navigate('/')}>
+            <PublicIcon name="offer" />
             {labels.home}
           </button>
           <button aria-current={current('/books')} onClick={() => navigate('/books')}>
+            <PublicIcon name="book" />
             {labels.books}
           </button>
-          <button onClick={navigateToCategories}>{labels.categories}</button>
-          <span className="public-navigation__future" title={labels.later}>
-            {labels.authors}
-          </span>
-          <span className="public-navigation__future" title={labels.later}>
-            {labels.publishers}
-          </span>
-          <span className="public-navigation__future" title={labels.later}>
-            {labels.articles}
-          </span>
-          {session?.role === 'MEMBER' && (
-            <button onClick={() => navigate('/my-loans')}>{labels.myLoans}</button>
-          )}
+          <button onClick={navigateToCategories}>
+            <PublicIcon name="categories" />
+            {labels.categories}
+          </button>
+          <button onClick={() => navigate('/my-loans')}>
+            <PublicIcon name="history" />
+            {labels.myLoans}
+          </button>
           {session && session.role !== 'MEMBER' && (
             <button
               onClick={() =>
                 navigate(session.role === 'ADMIN' ? '/admin/categories' : '/librarian/books')
               }
             >
+              <PublicIcon name="account" />
               {labels.workspace}
             </button>
           )}
         </nav>
-
-        <form className="header-search" role="search" onSubmit={submitSearch}>
-          <button type="button" className="header-search__category" onClick={navigateToCategories}>
-            <PublicIcon name="categories" />
-            <span>{labels.allCategories}</span>
-            <span aria-hidden="true">⌄</span>
-          </button>
-          <label className="sr-only" htmlFor="header-catalog-search">
-            {labels.searchLabel}
-          </label>
-          <input
-            id="header-catalog-search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder={labels.search}
-          />
-          <button className="header-search__submit" aria-label={labels.searchLabel}>
-            <PublicIcon name="search" />
-          </button>
-        </form>
       </div>
     </div>
   );

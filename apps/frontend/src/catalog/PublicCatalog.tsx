@@ -183,8 +183,10 @@ export function PublicCatalog({
       if (!showFullCatalog) return;
       const params = new URLSearchParams(window.location.search);
       const urlQuery = params.get('q') || '';
+      const urlCategoryId = params.get('categoryId') || '';
       setQueryInput(urlQuery);
       setQuery(urlQuery);
+      setCategoryId(urlCategoryId);
       setPage(1);
     };
     syncUrlQuery();
