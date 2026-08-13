@@ -30,16 +30,25 @@ describe('Phase 5.2.3 reservation query, cancellation, and expiration lifecycle'
 
   const createBook = async (copies = 1) => {
     sequence += 1;
-    const key = `${suffix}-${sequence}`;
+    const current = sequence;
+    const key = `${suffix}-${current}`;
     const book = await prisma.book.create({
       data: {
-        title: `Reservation lifecycle ${sequence}`,
+        title: `Reservation lifecycle ${current}`,
         slug: key,
+        coverImageUrl: `https://covers.test/${key}.jpg`,
         categoryId,
         totalCopies: copies,
         availableCopies: copies,
       },
     });
+    const author = await prisma.author.create({
+      data: {
+        name: `${suffix} author ${current}`,
+        nameAr: `مؤلف الحجز ${current}`,
+      },
+    });
+    await prisma.bookAuthor.create({ data: { bookId: book.id, authorId: author.id } });
     const bookCopies = await Promise.all(
       Array.from({ length: copies }, (_, index) =>
         prisma.bookCopy.create({
@@ -55,7 +64,7 @@ describe('Phase 5.2.3 reservation query, cancellation, and expiration lifecycle'
         }),
       ),
     );
-    return { book, copies: bookCopies };
+    return { book, copies: bookCopies, author };
   };
   const reserve = (token: string, bookId: string) =>
     api().post('/api/v1/reservations').set('Authorization', `Bearer ${token}`).send({ bookId });
@@ -112,7 +121,9 @@ describe('Phase 5.2.3 reservation query, cancellation, and expiration lifecycle'
       });
     await prisma.reservation.deleteMany({ where: { book: { slug: { startsWith: suffix } } } });
     await prisma.bookCopy.deleteMany({ where: { book: { slug: { startsWith: suffix } } } });
+    await prisma.bookAuthor.deleteMany({ where: { book: { slug: { startsWith: suffix } } } });
     await prisma.book.deleteMany({ where: { slug: { startsWith: suffix } } });
+    await prisma.author.deleteMany({ where: { name: { startsWith: suffix } } });
   });
   afterAll(async () => {
     if (prisma) await prisma.$disconnect();
@@ -141,7 +152,19 @@ describe('Phase 5.2.3 reservation query, cancellation, and expiration lifecycle'
       memberId: firstMember.id,
       status: ReservationStatus.ACTIVE,
       canCancel: true,
-      book: { id: second.book.id },
+      book: {
+        id: second.book.id,
+        coverImageUrl: `https://covers.test/${second.book.slug}.jpg`,
+        authors: [
+          {
+            author: {
+              id: second.author.id,
+              name: second.author.name,
+              nameAr: second.author.nameAr,
+            },
+          },
+        ],
+      },
       bookCopy: { status: BookCopyStatus.RESERVED },
       pickupLocation: { floor: { floorNumber: 3 }, room: { roomNumber: '315' } },
     });

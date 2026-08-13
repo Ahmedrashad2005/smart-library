@@ -159,11 +159,23 @@ Phase 5.2 is complete for the backend Reservation Engine lifecycle `CREATE`, `QU
 - [x] Render a persistent localized success state from backend status, assigned copy, pickup location, and exact server-provided expiration.
 - [x] Verify Arabic RTL and English LTR behavior, responsive 1440/900/390 layouts, accessibility, frontend/backend regressions, Docker health, and Campus data integrity.
 
-Phase 5.3.1 exposes reservation creation only. Phase 5.3.2 next adds My Reservations; cancellation UI, pickup, QR/scanning, `COLLECTED`, Reservation-to-Loan conversion, notifications, and staff reservation actions remain unstarted.
+Phase 5.3.1 exposes reservation creation only. Cancellation UI, pickup, QR/scanning, `COLLECTED`, Reservation-to-Loan conversion, notifications, and staff reservation actions remain unstarted.
+
+#### Phase 5.3.2A — My Reservations: List, Filters & Details — Complete
+
+- [x] Add the MEMBER-only `/my-reservations` and owned `/my-reservations/:id` routes with refresh-session waiting, safe login return, and non-member guidance.
+- [x] Add natural My Reservations access to authenticated member account/mobile navigation while preserving My Loans.
+- [x] Integrate server-side `active|cancelled|expired|collected|all` filters, URL page/filter state, a safe limit of 12, invalid-page correction, and accessible previous/next controls.
+- [x] Render responsive bilingual book-activity cards and details with real cover/fallback, authors, localized status, lifecycle dates, safe copy code, and Campus pickup location.
+- [x] Add localized loading, filter-aware empty, retryable error, stale-auth recovery, safe `403`/`404`, book-slug navigation, and no internal-ID presentation.
+- [x] Extend the shared safe reservation response with cover and author display data and verify it through the existing database-backed lifecycle suite.
+- [x] Verify meaningful route/API/page tests, Arabic RTL and English LTR, responsive 1440/900/390 layouts, full regressions, Docker health, and Campus data integrity.
+
+Phase 5.3.2A is read-only. Phase 5.3.2B next adds Cancellation, Deadline UX, and final acceptance. Pickup, QR/scanning, `COLLECTED`, Reservation-to-Loan conversion, notifications, and staff reservation actions remain outside that scope.
 
 ### Later Phase 5 work — Not started
 
-- [ ] Phase 5.3.2: add the authenticated My Reservations list/details experience and member cancellation UI only when separately authorized.
+- [ ] Phase 5.3.2B: add member cancellation confirmation, cancellation result refresh, reliable deadline UX, and final My Reservations acceptance only when separately authorized.
 - [ ] Later pickup phase: implement the separately approved pickup/collection scope; if authorized, it must atomically coordinate `COLLECTED`, copy/Loan state, counters, pickup proof, and replay safety.
 - [ ] Implement verified borrower ratings/reviews.
 - [ ] Implement in-app/email notifications, preferences, BullMQ jobs, and schedules.

@@ -54,7 +54,7 @@ The response contains safe reservation and book data, the assigned copy summary,
 
 ### Reservation queries, cancellation, and expiration
 
-`GET /api/v1/reservations/me` is MEMBER-only and derives ownership from JWT. It returns deterministic newest-first pagination (`page`, `limit`, maximum 50) and accepts `status=active|cancelled|expired|collected|all`; malformed status, non-integer, non-positive, and oversized pagination values return `400`. `GET /api/v1/reservations/:id` validates UUID format and permits only the owning member. Both return safe book/copy/location data and `canCancel`, never member authentication data, QR/pickup tokens, barcodes, or acquisition/source metadata.
+`GET /api/v1/reservations/me` is MEMBER-only and derives ownership from JWT. It returns deterministic newest-first pagination (`page`, `limit`, maximum 50) and accepts `status=active|cancelled|expired|collected|all`; malformed status, non-integer, non-positive, and oversized pagination values return `400`. `GET /api/v1/reservations/:id` validates UUID format and permits only the owning member. Both return safe book presentation data (title, localized title, slug, cover, and author `id`/`name`/`nameAr`), safe copy/location data, and `canCancel`; they never return member authentication data, QR/pickup tokens, barcodes, or acquisition/source metadata.
 
 `POST /api/v1/reservations/:id/cancel` locks an owned reservation and atomically changes `ACTIVE → CANCELLED`, releases `RESERVED → AVAILABLE`, synchronizes inventory, and writes one `RESERVATION_CANCELLED` audit event. Missing, foreign, terminal, already-expired, and inconsistent records use the normal `404`/`403`/`409` errors.
 
@@ -63,6 +63,10 @@ Due reservations are processed at backend startup and every 60 seconds by defaul
 ### Phase 5.3.1 frontend integration
 
 Campus Book Details calls the existing `POST /api/v1/reservations` endpoint with `{ "bookId": "<uuid>" }` and the restored or newly issued member access token. It never sends `memberId` or `bookCopyId`. The frontend treats the response as the source of truth for `status`, assigned copy code, pickup location, and formatted `expiresAt`; it does not calculate the reservation window locally. HTTP `401`, `403`, `404`, duplicate/no-copy `409`, and unexpected failures map to localized member-safe feedback while the backend contract and permissions remain unchanged.
+
+### Phase 5.3.2A member query integration
+
+The protected `/my-reservations` frontend requests `GET /reservations/me?status=<filter>&page=<page>&limit=12`; filtering and pagination remain server-side. `/my-reservations/:id` requests the ownership-protected detail endpoint rather than reusing or guessing list data. A stale `401` recovers through the existing login/return flow, ordinary failures remain retryable in place, and `403`/`404` details are rendered as safe localized states. This integration is read-only and does not call the existing cancellation endpoint.
 
 ## Phase 3 catalog
 

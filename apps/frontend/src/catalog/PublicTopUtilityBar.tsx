@@ -29,6 +29,8 @@ const copy = {
     servicesMenu: 'قائمة خدمات نَوَى',
     books: 'الكتب',
     borrowing: 'الاستعارة',
+    myLoans: 'إعاراتي',
+    myReservations: 'حجوزاتي',
     categories: 'الأقسام',
     campus: 'مكتبة الكلية',
     utilityNavigation: 'روابط وخدمات نَوَى',
@@ -49,6 +51,8 @@ const copy = {
     servicesMenu: 'NAWA services menu',
     books: 'Books',
     borrowing: 'Borrowing',
+    myLoans: 'My loans',
+    myReservations: 'My Reservations',
     categories: 'Categories',
     campus: 'Campus Library',
     utilityNavigation: 'NAWA utility navigation',
@@ -105,8 +109,14 @@ export function PublicTopUtilityBar({
             >
               <button type="button" role="menuitem" onClick={() => navigate(accountPath)}>
                 <PublicIcon name="account" />
-                {labels.accountArea}
+                {session.role === 'MEMBER' ? labels.myLoans : labels.accountArea}
               </button>
+              {session.role === 'MEMBER' && (
+                <button type="button" role="menuitem" onClick={() => navigate('/my-reservations')}>
+                  <PublicIcon name="book" />
+                  {labels.myReservations}
+                </button>
+              )}
               <button
                 type="button"
                 role="menuitem"

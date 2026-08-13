@@ -29,6 +29,11 @@ const reservationInclude = {
       coverImageUrl: true,
       totalCopies: true,
       availableCopies: true,
+      authors: {
+        select: {
+          author: { select: { id: true, name: true, nameAr: true } },
+        },
+      },
     },
   },
   bookCopy: {

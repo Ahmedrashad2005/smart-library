@@ -8,6 +8,7 @@ import { BookDetail } from './catalog/BookDetail';
 import { CampusPage } from './catalog/CampusPage';
 import { canAccessLoanRoute, isMemberLoanRoute, isStaffLoanRoute } from './loans/access';
 import { LoanRoute } from './loans/pages';
+import { MyReservationsRoute } from './reservations/MyReservationsPage';
 import {
   canManageRoute,
   managementListQuery,
@@ -141,6 +142,7 @@ function App(): JSX.Element {
   const area = routeArea(path);
   const management = !!area;
   const loanRoute = isStaffLoanRoute(path) || isMemberLoanRoute(path);
+  const reservationRoute = path === '/my-reservations' || /^\/my-reservations\/[^/]+$/.test(path);
   let page: JSX.Element;
   if (path === '/auth/login') {
     const returnTo = safeReturnPath(
@@ -155,7 +157,44 @@ function App(): JSX.Element {
         onSuccess={() => go(returnTo)}
       />
     );
-  } else if (loanRoute && !canAccessLoanRoute(!!session, session?.role, path))
+  } else if (reservationRoute && !sessionReady)
+    page = (
+      <MemberRouteState
+        locale={arabic ? 'ar' : 'en'}
+        message={arabic ? 'جارٍ التحقق من حسابك…' : 'Checking your account…'}
+      />
+    );
+  else if (reservationRoute && !session)
+    page = (
+      <AuthRedirect
+        go={go}
+        returnTo={`${path}${window.location.search}`}
+        locale={arabic ? 'ar' : 'en'}
+      />
+    );
+  else if (reservationRoute && session?.role !== 'MEMBER')
+    page = (
+      <MemberRouteState
+        locale={arabic ? 'ar' : 'en'}
+        error
+        message={
+          arabic
+            ? 'حجوزاتي متاحة لحسابات الأعضاء فقط.'
+            : 'My Reservations is available to member accounts only.'
+        }
+      />
+    );
+  else if (reservationRoute)
+    page = (
+      <MyReservationsRoute
+        path={path}
+        token={session!.token}
+        locale={arabic ? 'ar' : 'en'}
+        go={go}
+        onAuthRequired={() => go(loginPath(`${path}${window.location.search}`))}
+      />
+    );
+  else if (loanRoute && !canAccessLoanRoute(!!session, session?.role, path))
     page = <LoginGate session={session} setSession={setSession} locale={arabic ? 'ar' : 'en'} />;
   else if (loanRoute)
     page = (
@@ -219,6 +258,50 @@ function App(): JSX.Element {
       )}
       <main>{page}</main>
     </div>
+  );
+}
+
+function AuthRedirect({
+  go,
+  returnTo,
+  locale,
+}: {
+  go: (to: string) => void;
+  returnTo: string;
+  locale: 'ar' | 'en';
+}): JSX.Element {
+  useEffect(() => go(loginPath(returnTo)), [go, returnTo]);
+  return (
+    <MemberRouteState
+      locale={locale}
+      message={locale === 'ar' ? 'جارٍ فتح تسجيل الدخول…' : 'Opening sign in…'}
+    />
+  );
+}
+
+function MemberRouteState({
+  locale,
+  message,
+  error = false,
+}: {
+  locale: 'ar' | 'en';
+  message: string;
+  error?: boolean;
+}): JSX.Element {
+  return (
+    <section className="page member-route-state">
+      <div className={`state${error ? ' error' : ''}`} role={error ? 'alert' : 'status'}>
+        <h1>{message}</h1>
+        {!error && <span className="spinner" aria-hidden="true" />}
+        {error && (
+          <p>
+            {locale === 'ar'
+              ? 'استخدم حساب عضو للوصول إلى حجوزات مكتبة الكلية.'
+              : 'Use a member account to view College Library reservations.'}
+          </p>
+        )}
+      </div>
+    </section>
   );
 }
 

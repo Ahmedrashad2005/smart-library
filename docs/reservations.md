@@ -14,7 +14,15 @@ Unauthenticated students are sent to the existing NAWA account flow with an enco
 
 The request contains only `bookId`; identity comes from the bearer token and the backend remains authoritative for eligibility and physical-copy selection. Successful creation replaces the action with a persistent, localized confirmation using the returned book, ACTIVE state, copy code, Campus pickup floor/room, and exact server-controlled `expiresAt`. Duplicate, unavailable, ineligible, missing-book, expired-session, and unexpected/network responses receive safe localized handling without exposing backend internals.
 
-Phase 5.3.1 does not add `/my-reservations`, cancellation UI, pickup confirmation, QR/scanning, `COLLECTED`, Reservation-to-Loan conversion, notifications, or staff reservation actions. Phase 5.3.2 is responsible for My Reservations.
+Phase 5.3.1 did not add `/my-reservations`, cancellation UI, pickup confirmation, QR/scanning, `COLLECTED`, Reservation-to-Loan conversion, notifications, or staff reservation actions.
+
+## Phase 5.3.2A read-only My Reservations
+
+Authenticated MEMBER accounts can now open `/my-reservations` and owned `/my-reservations/:id` details. An unauthenticated visit waits for the established refresh-cookie restoration and then uses the existing polished login with a validated internal return path; LIBRARIAN and ADMIN accounts receive member-only guidance without querying member data.
+
+The list requests backend pagination directly with a fixed safe limit of 12 and defaults to `active`. Accessible filters for `active`, `cancelled`, `expired`, `collected`, and `all` reset to page one and are reflected with the current page in the URL. Cards remain consumer-facing and book-focused: localized title/authors/status, cover or deterministic NAWA fallback, exact formatted lifecycle dates, safe copy code, and real Campus floor/room are shown without exposing reservation/member/copy UUIDs. Owned details use `GET /reservations/:id`, retain the same privacy boundary, and link back through the real book slug.
+
+The shared safe reservation book response now also contains `coverImageUrl` and author display records (`id`, `name`, `nameAr`) so list and detail presentations do not infer catalog data. Phase 5.3.2A is intentionally read-only: it adds no cancellation control, deadline countdown, reminders, pickup, QR/scanning, `COLLECTED` transition, or Reservation-to-Loan conversion. Phase 5.3.2B is responsible for Cancellation, Deadline UX, and final acceptance.
 
 ## Create reservation API
 
@@ -28,7 +36,7 @@ Phase 5.3.1 does not add `/my-reservations`, cancellation UI, pickup confirmatio
 
 The member identity always comes from the validated access token. Librarians and administrators cannot use this member-self-service endpoint, and a client cannot nominate another member or a physical copy.
 
-The safe response contains the reservation timestamps/status, a display-safe book summary, the assigned copy's ID/code/status/condition, the Campus library/floor/room/section/shelf pickup location, and committed book availability. It excludes password/token fields, member private data, copy barcode/QR values, acquisition data, source-inventory metadata, and any pickup token.
+The safe response contains the reservation timestamps/status, a display-safe book summary with cover and author display fields, the assigned copy's ID/code/status/condition, the Campus library/floor/room/section/shelf pickup location, and committed book availability. It excludes password/token fields, member private data, copy barcode/QR values, acquisition data, source-inventory metadata, and any pickup token.
 
 Errors use the normal API contract:
 

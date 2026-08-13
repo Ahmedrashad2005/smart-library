@@ -34,6 +34,7 @@ const copy = {
     navigation: 'التنقل الرئيسي',
     workspace: 'مساحة العمل',
     myLoans: 'إعاراتي',
+    myReservations: 'حجوزاتي',
     campus: 'مكتبة الكلية',
     loadingCategories: 'جارٍ تحميل الأقسام…',
     categoriesError: 'تعذر تحميل الأقسام.',
@@ -48,6 +49,7 @@ const copy = {
     navigation: 'Main navigation',
     workspace: 'Workspace',
     myLoans: 'My loans',
+    myReservations: 'My Reservations',
     campus: 'Campus Library',
     loadingCategories: 'Loading categories…',
     categoriesError: 'Categories could not be loaded.',
@@ -215,6 +217,15 @@ export function MainHeader({ locale, currentPath, session, go }: Props): JSX.Ele
             <PublicIcon name="history" />
             {labels.myLoans}
           </button>
+          {session?.role === 'MEMBER' && (
+            <button
+              aria-current={current('/my-reservations')}
+              onClick={() => navigate('/my-reservations')}
+            >
+              <PublicIcon name="book" />
+              {labels.myReservations}
+            </button>
+          )}
           {session && session.role !== 'MEMBER' && (
             <button
               onClick={() =>

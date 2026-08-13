@@ -67,6 +67,7 @@ function reservation(overrides: Partial<ReservationResult> = {}): ReservationRes
       title: 'Operating System Concepts',
       titleAr: 'مفاهيم نظم التشغيل',
       slug: 'operating-system-concepts',
+      authors: [],
     },
     bookCopy: { id: 'copy-campus', copyCode: 'CAMPUS-017', status: 'RESERVED', condition: 'GOOD' },
     pickupLocation: {

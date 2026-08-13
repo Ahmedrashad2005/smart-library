@@ -266,4 +266,32 @@ describe('PublicHeader', () => {
     expect(signOut).toHaveBeenCalledTimes(1);
     expect(go).not.toHaveBeenCalled();
   });
+
+  it('adds My Reservations naturally to an authenticated MEMBER account and mobile navigation', async () => {
+    const go = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <PublicHeader
+        locale="en"
+        currentPath="/my-reservations"
+        session={{ role: 'MEMBER', fullName: 'Nawa Member' }}
+        go={go}
+        onLanguageChange={vi.fn()}
+        onSignOut={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Nawa Member' }));
+    const accountMenu = screen.getByRole('menu', { name: 'Account menu' });
+    await user.click(within(accountMenu).getByRole('menuitem', { name: 'My Reservations' }));
+    expect(go).toHaveBeenCalledWith('/my-reservations');
+
+    await user.click(screen.getByRole('button', { name: 'Open NAWA menu' }));
+    const navigation = screen.getByRole('navigation', { name: 'Main navigation' });
+    expect(within(navigation).getByRole('button', { name: 'My loans' })).toBeInTheDocument();
+    expect(within(navigation).getByRole('button', { name: 'My Reservations' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+  });
 });
