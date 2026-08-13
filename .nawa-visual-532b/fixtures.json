@@ -1,0 +1,39 @@
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5ZTI1NDQzMi0yZTlkLTQ5MGYtODQwZC03NDExZjBlYzQzODIiLCJyb2xlIjoiTUVNQkVSIiwiaWF0IjoxNzg2NjIyNjQ2LCJleHAiOjE3ODY2MjM1NDZ9.L2Gqxxb9O3Qo92yDzN0yVA0D4raWgCe1ETWnS_l9omc",
+  "reservations": [
+    {
+      "id": "bd2ca9ea-0a54-4325-9f7c-f4bf39d6d7e8",
+      "bookSlug": "campus-source-23-analog-and-digital-filter-desian"
+    },
+    {
+      "id": "9b965b2d-8582-4be6-816b-6274add886ef",
+      "bookSlug": "campus-source-21-digital-image-processing-using-matlab"
+    },
+    {
+      "id": "84f42cec-c997-43eb-ac19-2eea265503eb",
+      "bookSlug": "campus-source-16-introduction-to-biomedical-engineering"
+    },
+    {
+      "id": "85c761f5-dd85-4b30-bc25-8eeba50a2ad7",
+      "bookSlug": "campus-source-17-operating-system-concepts"
+    }
+  ],
+  "roles": {
+    "cancelled": {
+      "id": "bd2ca9ea-0a54-4325-9f7c-f4bf39d6d7e8",
+      "bookSlug": "campus-source-23-analog-and-digital-filter-desian"
+    },
+    "expired": {
+      "id": "9b965b2d-8582-4be6-816b-6274add886ef",
+      "bookSlug": "campus-source-21-digital-image-processing-using-matlab"
+    },
+    "normal": {
+      "id": "84f42cec-c997-43eb-ac19-2eea265503eb",
+      "bookSlug": "campus-source-16-introduction-to-biomedical-engineering"
+    },
+    "warning": {
+      "id": "85c761f5-dd85-4b30-bc25-8eeba50a2ad7",
+      "bookSlug": "campus-source-17-operating-system-concepts"
+    }
+  }
+}

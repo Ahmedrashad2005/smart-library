@@ -173,9 +173,20 @@ Phase 5.3.1 exposes reservation creation only. Cancellation UI, pickup, QR/scann
 
 Phase 5.3.2A is read-only. Phase 5.3.2B next adds Cancellation, Deadline UX, and final acceptance. Pickup, QR/scanning, `COLLECTED`, Reservation-to-Loan conversion, notifications, and staff reservation actions remain outside that scope.
 
+#### Phase 5.3.2B — Cancellation, Deadline UX & Final Acceptance — Complete
+
+- [x] Show cancellation only from backend `canCancel`, with a bilingual semantic confirmation, Escape/focus management, disabled pending controls, and duplicate-submit protection.
+- [x] Use the existing owned cancellation endpoint, committed response, Active-list removal, server refetch, Cancelled-history visibility, and consistent detail/list state.
+- [x] Map safe `403`, `404`, and network errors; on `409`, fetch the authoritative detail and present the winning terminal lifecycle state.
+- [x] Present remaining time only from `expiresAt`, with minute-level updates and calm normal/soon/critical treatments rather than an invented reservation window.
+- [x] Stop positive time at deadline and issue one lightweight authoritative list/detail refresh without local expiration or high-frequency API polling.
+- [x] Verify cancellation, deadline, race, error, accessibility, RTL/LTR, responsive 1440/900/390, regression, Docker, and Campus/inventory integrity requirements.
+
+**Phase 5.3.2 — My Reservations is complete:** members can view, filter, inspect, understand the deadline, and cancel their own eligible reservation while the backend remains lifecycle authority.
+
 ### Later Phase 5 work — Not started
 
-- [ ] Phase 5.3.2B: add member cancellation confirmation, cancellation result refresh, reliable deadline UX, and final My Reservations acceptance only when separately authorized.
+- [ ] Phase 5.3.3: complete Member Area visual polish and redesign My Loans using the established NAWA member patterns; do not change loan business rules without separate authorization.
 - [ ] Later pickup phase: implement the separately approved pickup/collection scope; if authorized, it must atomically coordinate `COLLECTED`, copy/Loan state, counters, pickup proof, and replay safety.
 - [ ] Implement verified borrower ratings/reviews.
 - [ ] Implement in-app/email notifications, preferences, BullMQ jobs, and schedules.

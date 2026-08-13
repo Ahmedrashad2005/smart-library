@@ -79,3 +79,11 @@ export function listMyReservations(filters: ReservationFilters, accessToken: str
 export function reservationDetail(id: string, accessToken: string) {
   return apiRequest<ReservationResult>(`/reservations/${encodeURIComponent(id)}`, {}, accessToken);
 }
+
+export function cancelReservation(id: string, accessToken: string) {
+  return apiRequest<ReservationResult>(
+    `/reservations/${encodeURIComponent(id)}/cancel`,
+    { method: 'POST' },
+    accessToken,
+  );
+}

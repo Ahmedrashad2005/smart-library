@@ -271,7 +271,36 @@
 }
 
 .member-reservation-dates .is-deadline dd {
-  color: #a34747;
+  color: var(--nawa-navy, #102f5e);
+}
+
+.member-reservation-remaining {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 30px;
+  margin-block-start: 8px !important;
+  border: 1px solid #d7e2ef;
+  border-radius: 999px;
+  background: #f5f8fc;
+  color: #49617e !important;
+  padding: 4px 10px;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.member-reservation-remaining.is-soon {
+  border-color: #ead5a9;
+  background: #fff9ed;
+  color: #7a5717 !important;
+}
+
+.member-reservation-remaining.is-critical,
+.member-reservation-remaining.is-passed {
+  border-color: #f0caca;
+  background: #fff5f4;
+  color: #994444 !important;
 }
 
 .member-reservation-location {
@@ -329,11 +358,14 @@
 
 .member-reservation-card__footer > div {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 8px;
 }
 
 .member-primary-button,
 .member-link-button,
+.member-cancel-button,
 .member-back-button,
 .member-reservation-pagination button {
   min-height: 44px;
@@ -350,6 +382,31 @@
 
 .member-primary-button:hover {
   background: #0b254c;
+}
+
+.member-cancel-button {
+  border: 1px solid #e7aaaa;
+  background: #fff;
+  color: #9a3f3f;
+}
+
+.member-cancel-button:hover:not(:disabled) {
+  border-color: var(--nawa-coral, #e86a6a);
+  background: #fff5f4;
+}
+
+.member-cancel-button.is-confirm {
+  border-color: var(--nawa-coral, #e86a6a);
+  background: var(--nawa-coral, #e86a6a);
+  color: #fff;
+}
+
+.member-cancel-button.is-confirm:hover:not(:disabled) {
+  background: #d75b5b;
+}
+
+.member-cancel-button:disabled {
+  opacity: 0.58;
 }
 
 .member-link-button,
@@ -411,6 +468,106 @@
   min-width: 120px;
   color: var(--text-secondary);
   text-align: center;
+}
+
+.member-reservation-notice {
+  display: flex;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 44px;
+  margin: 0 0 18px;
+  border: 1px solid #bde5ca;
+  border-radius: 11px;
+  background: #f1faf4;
+  color: #176a39;
+  padding: 10px 14px;
+  align-items: center;
+  gap: 9px;
+  font-weight: 700;
+}
+
+.member-reservation-notice > span {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #d8f2e1;
+  place-items: center;
+}
+
+.member-cancel-backdrop {
+  position: fixed;
+  z-index: 40;
+  display: grid;
+  padding: 20px;
+  background: rgb(16 47 94 / 0.34);
+  inset: 0;
+  place-items: center;
+}
+
+.member-cancel-dialog {
+  width: min(430px, 100%);
+  border: 1px solid #eadfe0;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 20px 50px rgb(16 47 94 / 0.18);
+  padding: 26px;
+  text-align: center;
+}
+
+.member-cancel-dialog__icon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  margin-inline: auto;
+  border-radius: 50%;
+  background: #fff0ef;
+  color: #a64444;
+  font-size: 1.2rem;
+  font-weight: 850;
+  place-items: center;
+}
+
+.member-cancel-dialog h2 {
+  margin: 14px 0 0;
+  color: var(--nawa-navy, #102f5e);
+  font-size: 1.35rem;
+}
+
+.member-cancel-dialog > p {
+  margin: 9px 0 0;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.member-cancel-dialog .member-cancel-dialog__book {
+  color: var(--nawa-navy, #102f5e);
+  font-weight: 800;
+}
+
+.member-cancel-dialog .member-cancel-dialog__error {
+  border: 1px solid #f0cccc;
+  border-radius: 9px;
+  background: #fff5f4;
+  color: #963e3e;
+  padding: 9px 11px;
+}
+
+.member-cancel-dialog__actions,
+.member-reservation-detail__actions {
+  display: flex;
+  margin-block-start: 22px;
+  align-items: center;
+  gap: 10px;
+}
+
+.member-cancel-dialog__actions {
+  justify-content: center;
+}
+
+.member-cancel-dialog__actions > button {
+  min-width: 130px;
 }
 
 .member-back-button {
@@ -589,11 +746,31 @@
 
   .member-reservation-card__footer > div {
     margin-block-start: 12px;
+    justify-content: stretch;
   }
 
   .member-reservation-card__footer button {
-    flex: 1;
+    flex: 1 1 calc(50% - 8px);
     padding-inline: 10px;
+  }
+
+  .member-cancel-dialog {
+    padding: 22px 18px;
+  }
+
+  .member-cancel-dialog__actions {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+
+  .member-cancel-dialog__actions > button,
+  .member-reservation-detail__actions > button {
+    width: 100%;
+  }
+
+  .member-reservation-detail__actions {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .member-reservation-location strong {

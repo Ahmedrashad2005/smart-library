@@ -68,6 +68,14 @@ Campus Book Details calls the existing `POST /api/v1/reservations` endpoint with
 
 The protected `/my-reservations` frontend requests `GET /reservations/me?status=<filter>&page=<page>&limit=12`; filtering and pagination remain server-side. `/my-reservations/:id` requests the ownership-protected detail endpoint rather than reusing or guessing list data. A stale `401` recovers through the existing login/return flow, ordinary failures remain retryable in place, and `403`/`404` details are rendered as safe localized states. This integration is read-only and does not call the existing cancellation endpoint.
 
+### Phase 5.3.2B cancellation and deadline integration
+
+The completed My Reservations frontend calls `POST /reservations/:id/cancel` only after an accessible confirmation and only when the preceding safe response contains `canCancel: true`. The request carries no client-computed status, copy state, member identity, or expiration value. Pending confirmation is disabled and guarded against duplicate submission; a success uses the committed reservation response and then refreshes the current server-side filter.
+
+Cancellation `403` and `404` responses receive safe localized feedback. A `409` is treated as a lifecycle race and followed by the ownership-protected `GET /reservations/:id`; the returned status determines whether the member sees already-cancelled, expired, or generic changed-state feedback. Network failures remain retryable without optimistic mutation.
+
+The frontend derives human-readable remaining time exclusively from the response `expiresAt`. It updates presentation at minute-level intervals and performs one authoritative list/detail refresh when a visible ACTIVE deadline passes. `GET` query-time expiration processing or the backend scheduler decides the actual status; the client does not call an expiration endpoint, persist `EXPIRED`, or poll the API every second.
+
 ## Phase 3 catalog
 
 Public catalog endpoints are available under `/api/v1/books`, including search (`q`), category and language filters, availability filtering, pagination, a slug detail endpoint, and availability by location. `GET /categories`, `/authors`, `/publishers`, `/sections`, and `/shelves` provide active master data for catalog forms.

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { apiRequest } from '../lib/api';
-import { createReservation, listMyReservations, reservationDetail } from './api';
+import { cancelReservation, createReservation, listMyReservations, reservationDetail } from './api';
 
 vi.mock('../lib/api', () => ({ apiRequest: vi.fn() }));
 
@@ -47,5 +47,15 @@ describe('reservation API boundary', () => {
     vi.mocked(apiRequest).mockResolvedValue({ id: 'owned' });
     await reservationDetail('owned/id', 'member-token');
     expect(apiRequest).toHaveBeenCalledWith('/reservations/owned%2Fid', {}, 'member-token');
+  });
+
+  it('cancels the encoded owned reservation without sending client lifecycle data', async () => {
+    vi.mocked(apiRequest).mockResolvedValue({ id: 'owned', status: 'CANCELLED' });
+    await cancelReservation('owned/id', 'member-token');
+    expect(apiRequest).toHaveBeenCalledWith(
+      '/reservations/owned%2Fid/cancel',
+      { method: 'POST' },
+      'member-token',
+    );
   });
 });

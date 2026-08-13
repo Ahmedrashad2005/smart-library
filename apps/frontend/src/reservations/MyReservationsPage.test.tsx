@@ -100,7 +100,7 @@ describe('My Reservations list', () => {
     expect(screen.queryByText('reservation-private-id')).not.toBeInTheDocument();
     expect(screen.queryByText('member-private-id')).not.toBeInTheDocument();
     expect(screen.queryByText('copy-private-id')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Cancel reservation$/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cancel reservation' })).toBeInTheDocument();
   });
 
   it('uses active as the default backend filter with page one and limit 12', async () => {
@@ -259,7 +259,7 @@ describe('My Reservation details', () => {
     expect(screen.getByText('Third Floor · Room 315')).toBeInTheDocument();
     expect(screen.getByText('NAWA-CAMPUS-023')).toBeInTheDocument();
     expect(screen.queryByText('member-private-id')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Cancel reservation$/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cancel reservation' })).toBeInTheDocument();
   });
 
   it.each([

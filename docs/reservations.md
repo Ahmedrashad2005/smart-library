@@ -24,6 +24,16 @@ The list requests backend pagination directly with a fixed safe limit of 12 and 
 
 The shared safe reservation book response now also contains `coverImageUrl` and author display records (`id`, `name`, `nameAr`) so list and detail presentations do not infer catalog data. Phase 5.3.2A is intentionally read-only: it adds no cancellation control, deadline countdown, reminders, pickup, QR/scanning, `COLLECTED` transition, or Reservation-to-Loan conversion. Phase 5.3.2B is responsible for Cancellation, Deadline UX, and final acceptance.
 
+## Phase 5.3.2B cancellation and deadline UX
+
+Phase 5.3.2 is now complete. A cancellation action is rendered only when the safe backend response says `canCancel: true`; the frontend does not infer eligibility from timestamps or status. The action opens a bilingual semantic dialog with safe initial focus, keyboard containment, Escape/cancel behavior, focus restoration, disabled pending controls, and a one-request submission guard. Confirmation calls the existing owned `POST /reservations/:id/cancel` endpoint and waits for its committed response before changing the interface.
+
+A successful cancellation removes the reservation from the Active result, announces the outcome, refreshes the authoritative filtered list, and exposes the committed record through Cancelled history. Detail cancellation replaces the detail with the returned server state, removes the action, and a later list visit reads current backend data. Safe `403`/`404` and unexpected/network feedback remain inside the confirmation. A `409` lifecycle race triggers `GET /reservations/:id`; the refreshed `CANCELLED` or `EXPIRED` state is then presented instead of guessing which operation won.
+
+ACTIVE cards and details show a minute-level remaining-time description calculated only from the returned `expiresAt`, alongside the exact formatted timestamp. Neutral, subtle warning, and restrained critical treatments correspond to more than six hours, six hours or less, and one hour or less. One lightweight display timer updates at minute boundaries. When the deadline passes, positive remaining time stops and the page requests the owned list/detail again; backend query-time expiration processing remains the sole authority for `ACTIVE → EXPIRED`. There is no second-by-second API polling and the frontend never posts or persists expiration itself.
+
+Cancellation and the remaining-time treatment follow the established light NAWA marketplace language: navy-led hierarchy, restrained coral for the destructive confirmation, warm light surfaces, accessible 44px controls, and deliberate Arabic RTL/English LTR layouts. Phase 5.3.2 adds no pickup, QR/scanning, `COLLECTED`, Reservation-to-Loan conversion, reminders, notifications, payment, or checkout behavior. Phase 5.3.3 is the next authorized planning boundary for Member Area visual polish and My Loans redesign.
+
 ## Create reservation API
 
 `POST /api/v1/reservations` is restricted to an authenticated `MEMBER`. The body contains only an active Campus book UUID:
