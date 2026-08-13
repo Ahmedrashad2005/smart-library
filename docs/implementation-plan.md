@@ -147,9 +147,24 @@ Phase 5.2.3 completes CREATE, QUERY, CANCEL, and EXPIRE only. Collection, pickup
 
 Phase 5.2 is complete for the backend Reservation Engine lifecycle `CREATE`, `QUERY`, `CANCEL`, and `EXPIRE`. `COLLECTED` remains a future state only; no pickup, reservation-to-Loan conversion, QR/scanner, member reservation frontend, or notifications were started.
 
+### Phase 5.3 — Student Reservation UX — In progress
+
+#### Phase 5.3.1 — Reserve UX and Frontend Auth Integration — Complete
+
+- [x] Add a bilingual, accessible Reserve action to eligible Campus Book Details using the existing `POST /reservations` API and only `bookId`.
+- [x] Present real physical availability, available-copy count, College Library floor/room, disabled unavailable state, and MEMBER-only guidance.
+- [x] Replace developer/admin login language with a polished NAWA member account form and restore an existing HTTP-only refresh session without browser token storage.
+- [x] Preserve a validated internal Book Details return path through login and reject open-redirect and login-loop inputs.
+- [x] Prevent duplicate pending submissions and map duplicate, no-copy, 401, 403, 404, and network/unexpected outcomes to safe localized feedback.
+- [x] Render a persistent localized success state from backend status, assigned copy, pickup location, and exact server-provided expiration.
+- [x] Verify Arabic RTL and English LTR behavior, responsive 1440/900/390 layouts, accessibility, frontend/backend regressions, Docker health, and Campus data integrity.
+
+Phase 5.3.1 exposes reservation creation only. Phase 5.3.2 next adds My Reservations; cancellation UI, pickup, QR/scanning, `COLLECTED`, Reservation-to-Loan conversion, notifications, and staff reservation actions remain unstarted.
+
 ### Later Phase 5 work — Not started
 
-- [ ] Phase 5.3: implement the separately approved pickup/collection scope; if authorized, it must atomically coordinate `COLLECTED`, copy/Loan state, counters, pickup proof, and replay safety.
+- [ ] Phase 5.3.2: add the authenticated My Reservations list/details experience and member cancellation UI only when separately authorized.
+- [ ] Later pickup phase: implement the separately approved pickup/collection scope; if authorized, it must atomically coordinate `COLLECTED`, copy/Loan state, counters, pickup proof, and replay safety.
 - [ ] Implement verified borrower ratings/reviews.
 - [ ] Implement in-app/email notifications, preferences, BullMQ jobs, and schedules.
 - [ ] Implement book acquisition requests and damaged/missing/information/location reports.

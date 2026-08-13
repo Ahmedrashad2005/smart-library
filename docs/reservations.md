@@ -4,7 +4,17 @@
 
 A reservation is a member's temporary claim on one physical Campus `BookCopy` before pickup. It does not replace borrowing: `Loan` remains the source of truth only after a librarian completes physical pickup in a later phase.
 
-Phase 5.2 is complete for the protected API lifecycle `CREATE`, `QUERY`, `CANCEL`, and `EXPIRE`. It contains no Reserve button, member reservation frontend, pickup token, QR ticket, scanner, collection, Loan conversion, notification, payment, or checkout behavior.
+Phase 5.2 is complete for the protected API lifecycle `CREATE`, `QUERY`, `CANCEL`, and `EXPIRE`. That backend phase itself introduced no Reserve button or member frontend, and still contains no pickup token, QR ticket, scanner, collection, Loan conversion, notification, payment, or checkout behavior.
+
+## Phase 5.3.1 student Reserve UX
+
+The first student-facing flow now reuses the completed Reservation API from a Campus Book Details page. An eligible physical Campus title presents its real availability, available-copy count, College Library location, floor, and room beside a clear `احجز للاستعارة` / `Reserve for pickup` action. Unavailable and non-member states are explicit, and the action cannot be submitted twice while pending.
+
+Unauthenticated students are sent to the existing NAWA account flow with an encoded, validated internal `returnTo` path. Successful login updates the in-memory access session immediately and returns to the same Book Details URL, including safe query context; absolute, protocol-relative, backslash, and login-loop destinations are rejected. On application startup, an existing HTTP-only refresh cookie is exchanged through the established refresh and `/auth/me` endpoints so the frontend can restore the safe role/name session without browser token storage.
+
+The request contains only `bookId`; identity comes from the bearer token and the backend remains authoritative for eligibility and physical-copy selection. Successful creation replaces the action with a persistent, localized confirmation using the returned book, ACTIVE state, copy code, Campus pickup floor/room, and exact server-controlled `expiresAt`. Duplicate, unavailable, ineligible, missing-book, expired-session, and unexpected/network responses receive safe localized handling without exposing backend internals.
+
+Phase 5.3.1 does not add `/my-reservations`, cancellation UI, pickup confirmation, QR/scanning, `COLLECTED`, Reservation-to-Loan conversion, notifications, or staff reservation actions. Phase 5.3.2 is responsible for My Reservations.
 
 ## Create reservation API
 

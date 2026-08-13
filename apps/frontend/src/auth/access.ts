@@ -14,3 +14,19 @@ export const navigationFor = (role: Role): string[] =>
     : role === 'LIBRARIAN'
       ? ['/dashboard', '/librarian/dashboard', '/profile']
       : ['/dashboard', '/profile'];
+
+export function safeReturnPath(value: string | null | undefined, fallback = '/'): string {
+  if (!value || !value.startsWith('/') || value.startsWith('//') || value.includes('\\'))
+    return fallback;
+  try {
+    const url = new URL(value, 'https://nawa.local');
+    if (url.origin !== 'https://nawa.local' || url.pathname === '/auth/login') return fallback;
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return fallback;
+  }
+}
+
+export function loginPath(returnTo: string): string {
+  return `/auth/login?returnTo=${encodeURIComponent(safeReturnPath(returnTo, '/'))}`;
+}

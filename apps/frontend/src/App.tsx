@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
-import type { Role } from './auth/access';
+import { loginPath, safeReturnPath, type Role } from './auth/access';
 import { apiRequest, requestMessage } from './lib/api';
 import { PublicCatalog } from './catalog/PublicCatalog';
 import { PublicHeader } from './catalog/PublicHeader';
@@ -101,8 +101,29 @@ function navigate(to: string, setPath: (path: string) => void): void {
 function App(): JSX.Element {
   const [path, setPath] = useState(pathNow());
   const [session, setSession] = useState<Session>(null);
+  const [sessionReady, setSessionReady] = useState(false);
   const [notice, setNotice] = useState('');
   const [arabic, setArabic] = useState(document.documentElement.dir === 'rtl');
+  useEffect(() => {
+    let active = true;
+    void apiRequest<{ accessToken?: string }>('/auth/refresh', { method: 'POST' })
+      .then(async ({ accessToken }) => {
+        if (!accessToken) return;
+        const user = await apiRequest<{ role: Role; fullName: string }>(
+          '/auth/me',
+          {},
+          accessToken,
+        );
+        if (active) setSession({ token: accessToken, role: user.role, fullName: user.fullName });
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (active) setSessionReady(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
   useEffect(() => {
     const listener = () => {
       setPath(pathNow());
@@ -121,8 +142,21 @@ function App(): JSX.Element {
   const management = !!area;
   const loanRoute = isStaffLoanRoute(path) || isMemberLoanRoute(path);
   let page: JSX.Element;
-  if (loanRoute && !canAccessLoanRoute(!!session, session?.role, path))
-    page = <LoginGate session={session} setSession={setSession} />;
+  if (path === '/auth/login') {
+    const returnTo = safeReturnPath(
+      new URLSearchParams(window.location.search).get('returnTo'),
+      '/my-loans',
+    );
+    page = (
+      <LoginGate
+        session={session}
+        setSession={setSession}
+        locale={arabic ? 'ar' : 'en'}
+        onSuccess={() => go(returnTo)}
+      />
+    );
+  } else if (loanRoute && !canAccessLoanRoute(!!session, session?.role, path))
+    page = <LoginGate session={session} setSession={setSession} locale={arabic ? 'ar' : 'en'} />;
   else if (loanRoute)
     page = (
       <LoanRoute
@@ -134,7 +168,7 @@ function App(): JSX.Element {
       />
     );
   else if (management && !canManageRoute(session?.role, path))
-    page = <LoginGate session={session} setSession={setSession} />;
+    page = <LoginGate session={session} setSession={setSession} locale={arabic ? 'ar' : 'en'} />;
   else if (
     path === '/librarian/books' ||
     path === '/librarian/books/create' ||
@@ -149,7 +183,16 @@ function App(): JSX.Element {
     page = <CopiesManager path={path} token={session!.token} go={go} notify={setNotice} />;
   else if (area) page = <MasterManager area={area} token={session!.token} notify={setNotice} />;
   else if (path.startsWith('/books/'))
-    page = <BookDetail slug={path.split('/').at(-1) || ''} locale={arabic ? 'ar' : 'en'} go={go} />;
+    page = (
+      <BookDetail
+        slug={path.split('/').at(-1) || ''}
+        locale={arabic ? 'ar' : 'en'}
+        go={go}
+        session={session}
+        sessionReady={sessionReady}
+        onLoginRequired={() => go(loginPath(`${path}${window.location.search}`))}
+      />
+    );
   else if (path === '/campus') page = <CampusPage locale={arabic ? 'ar' : 'en'} go={go} />;
   else
     page = <PublicCatalog locale={arabic ? 'ar' : 'en'} go={go} showFullCatalog={path !== '/'} />;
@@ -161,7 +204,10 @@ function App(): JSX.Element {
         session={session}
         go={go}
         onLanguageChange={language}
-        onSignOut={() => setSession(null)}
+        onSignOut={() => {
+          setSession(null);
+          void apiRequest('/auth/logout', { method: 'POST' }).catch(() => undefined);
+        }}
       />
       {notice && (
         <div className="toast" role="status">
@@ -179,9 +225,13 @@ function App(): JSX.Element {
 function LoginGate({
   session,
   setSession,
+  locale,
+  onSuccess,
 }: {
   session: Session;
   setSession: (session: Session) => void;
+  locale: 'ar' | 'en';
+  onSuccess?: () => void;
 }): JSX.Element {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -201,22 +251,47 @@ function LoginGate({
         role: result.user.role,
         fullName: result.user.fullName,
       });
+      onSuccess?.();
     } catch (reason) {
       setError(requestMessage(reason));
     } finally {
       setSaving(false);
     }
   };
-  if (session?.role === 'MEMBER')
+  if (session?.role === 'MEMBER' && !onSuccess)
     return <AccessDenied message="Member accounts cannot access catalog management." />;
+  const labels =
+    locale === 'ar'
+      ? {
+          eyebrow: 'حساب نَوَى',
+          title: 'تسجيل الدخول',
+          description: 'سجّل دخولك للوصول إلى استعاراتك وحجوزاتك من مكتبة الكلية.',
+          email: 'البريد الإلكتروني',
+          password: 'كلمة المرور',
+          submit: 'تسجيل الدخول',
+          saving: 'جارٍ تسجيل الدخول…',
+        }
+      : {
+          eyebrow: 'NAWA account',
+          title: 'Sign in',
+          description: 'Sign in to access your loans and College Library reservations.',
+          email: 'Email',
+          password: 'Password',
+          submit: 'Sign in',
+          saving: 'Signing in…',
+        };
   return (
-    <section className="page narrow">
-      <div className="panel">
-        <p className="eyebrow">Protected area</p>
-        <h1>Sign in to manage the library</h1>
-        <p>Your access token is held only for this browser session.</p>
+    <section className="page member-login-page">
+      <div className="member-login-card">
+        <div className="member-login-brand" aria-hidden="true">
+          <span>NAWA</span>
+          <b>نَوَى</b>
+        </div>
+        <p className="member-login-eyebrow">{labels.eyebrow}</p>
+        <h1>{labels.title}</h1>
+        <p className="member-login-description">{labels.description}</p>
         <form className="stack" onSubmit={(event) => void submit(event)}>
-          <Field label="Email">
+          <Field label={labels.email}>
             <input
               type="email"
               value={email}
@@ -225,7 +300,7 @@ function LoginGate({
               autoComplete="email"
             />
           </Field>
-          <Field label="Password">
+          <Field label={labels.password}>
             <input
               type="password"
               value={password}
@@ -239,8 +314,8 @@ function LoginGate({
               {error}
             </p>
           )}
-          <button className="button primary" disabled={saving}>
-            {saving ? 'Signing in…' : 'Sign in'}
+          <button className="member-login-submit" disabled={saving}>
+            {saving ? labels.saving : labels.submit}
           </button>
         </form>
       </div>

@@ -21,6 +21,8 @@ const renderAt = (path: string) => {
 };
 describe('loan routes in the real application router', () => {
   beforeEach(() => {
+    document.documentElement.lang = 'en';
+    document.documentElement.dir = 'ltr';
     mockedApi.mockReset();
     mockedApi.mockImplementation(async (path: string) =>
       path === '/auth/login'
@@ -30,9 +32,8 @@ describe('loan routes in the real application router', () => {
   });
   it('redirects unauthenticated staff access to login', () => {
     renderAt('/librarian/loans');
-    expect(
-      screen.getByRole('heading', { name: 'Sign in to manage the library' }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+    expect(screen.queryByText(/access token|protected area/i)).not.toBeInTheDocument();
   });
   it('denies MEMBER staff access', async () => {
     mockedApi.mockImplementation(async (path: string) =>

@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
+import type { Role } from '../auth/access';
 import { apiRequest, requestMessage } from '../lib/api';
+import { ReservationAction } from '../reservations/ReservationAction';
 import { BookCoverMedia } from './BookCoverMedia';
 import { CampusAvailabilityCard, type CampusAvailability } from './CampusAvailabilityCard';
 import {
@@ -31,6 +33,9 @@ type Props = {
   slug: string;
   locale: PublicLocale;
   go: (to: string) => void;
+  session?: { token: string; role: Role } | null;
+  sessionReady?: boolean;
+  onLoginRequired?: () => void;
 };
 
 const copy = {
@@ -62,7 +67,14 @@ const copy = {
   },
 } as const;
 
-export function BookDetail({ slug, locale, go }: Props): JSX.Element {
+export function BookDetail({
+  slug,
+  locale,
+  go,
+  session = null,
+  sessionReady = true,
+  onLoginRequired = () => undefined,
+}: Props): JSX.Element {
   const [book, setBook] = useState<BookDetailRecord | null>(null);
   const [error, setError] = useState('');
   const labels = copy[locale];
@@ -162,6 +174,18 @@ export function BookDetail({ slug, locale, go }: Props): JSX.Element {
         </div>
         <aside className="book-detail-acquisition" aria-label={labels.campusAvailability}>
           <CampusAvailabilityCard availability={book.campusAvailability} locale={locale} />
+          {book.campusAvailability.hasPhysicalCopies && (
+            <ReservationAction
+              bookId={book.id}
+              bookTitle={title}
+              locale={locale}
+              availability={book.campusAvailability}
+              session={session}
+              sessionReady={sessionReady}
+              onLoginRequired={onLoginRequired}
+              go={go}
+            />
+          )}
         </aside>
       </div>
     </section>
