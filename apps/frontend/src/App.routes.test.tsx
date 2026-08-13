@@ -100,4 +100,74 @@ describe('loan routes in the real application router', () => {
       await screen.findByRole('heading', { name: 'Return Route Book — COPY-RETURN' }),
     ).toBeInTheDocument();
   });
+
+  it('renders the real public Campus route with its live data boundaries', async () => {
+    document.documentElement.lang = 'en';
+    document.documentElement.dir = 'ltr';
+    mockedApi.mockImplementation(async (path: string) => {
+      if (path === '/libraries')
+        return [
+          {
+            id: 'campus-library',
+            code: 'NAWA-COLLEGE-LIBRARY',
+            nameEn: 'College Library',
+            nameAr: 'مكتبة الكلية',
+          },
+        ];
+      if (path === '/libraries/campus-library')
+        return {
+          id: 'campus-library',
+          code: 'NAWA-COLLEGE-LIBRARY',
+          nameEn: 'College Library',
+          nameAr: 'مكتبة الكلية',
+          floors: [
+            {
+              id: 'floor-three',
+              floorNumber: 3,
+              nameEn: 'Floor 3',
+              nameAr: 'الطابق الثالث',
+              rooms: [
+                {
+                  id: 'room-315',
+                  roomNumber: '315',
+                  nameEn: 'Room 315',
+                  nameAr: 'غرفة 315',
+                },
+              ],
+            },
+          ],
+        };
+      if (path.startsWith('/books?'))
+        return {
+          items: [
+            {
+              id: 'campus-route-book',
+              slug: 'campus-route-book',
+              title: 'Campus Route Book',
+              totalCopies: 1,
+              availableCopies: 1,
+              authors: [],
+              campusAvailability: {
+                hasPhysicalCopies: true,
+                totalCopies: 1,
+                availableCopies: 1,
+                availabilityStatus: 'AVAILABLE',
+              },
+            },
+          ],
+          total: 1,
+          page: 1,
+          limit: 8,
+          totalPages: 1,
+          sourceCollections: [],
+        };
+      throw new Error(`Unexpected request: ${path}`);
+    });
+
+    renderAt('/campus');
+
+    expect(await screen.findByRole('heading', { name: 'College Library' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Campus Route Book' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/campus');
+  });
 });

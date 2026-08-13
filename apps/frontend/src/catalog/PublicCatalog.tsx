@@ -1,12 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { FormEvent } from 'react';
 import { apiRequest, requestMessage } from '../lib/api';
 import { BookShelfSection } from './BookShelfSection';
 import { BottomServiceStrip } from './BottomServiceStrip';
 import { BookCard } from './BookCard';
 import { CategoryStrip } from './CategoryStrip';
 import { HeroBanner } from './HeroBanner';
-import type { PublicBook, PublicCatalogResult, PublicCategory, PublicLocale } from './public.types';
+import {
+  publicCategoryName,
+  type PublicBook,
+  type PublicCatalogResult,
+  type PublicCategory,
+  type PublicLocale,
+} from './public.types';
 
 type SortValue = '' | 'newest' | 'title-desc';
 type LanguageValue = '' | 'en' | 'ar';
@@ -25,6 +30,8 @@ const copy = {
     availableNow: 'Available now',
     newBooks: 'New releases',
     mostRead: 'Most read',
+    campus: 'From your Campus Library',
+    campusDescription: 'Explore books currently held in the Campus Library.',
     fullCatalog: 'Full catalog',
     results: 'books found',
     filters: 'Catalog filters',
@@ -60,6 +67,8 @@ const copy = {
     availableNow: 'متاح الآن',
     newBooks: 'إصدارات جديدة',
     mostRead: 'الأكثر قراءة',
+    campus: 'من مكتبة كليتك',
+    campusDescription: 'اكتشف الكتب الموجودة في مكتبة الكلية.',
     fullCatalog: 'الفهرس الكامل',
     results: 'كتاب',
     filters: 'مرشحات الفهرس',
@@ -98,6 +107,7 @@ function booksPath(options: {
   available?: boolean;
   sort?: SortValue;
   language?: LanguageValue;
+  campus?: boolean;
 }): string {
   const params = new URLSearchParams({ limit: String(options.limit) });
   if (options.page) params.set('page', String(options.page));
@@ -106,6 +116,7 @@ function booksPath(options: {
   if (options.available) params.set('available', 'true');
   if (options.sort) params.set('sort', options.sort);
   if (options.language) params.set('language', options.language);
+  if (options.campus) params.set('campus', 'true');
   return `/books?${params.toString()}`;
 }
 
@@ -132,7 +143,6 @@ export function PublicCatalog({
   showFullCatalog = true,
 }: PublicCatalogProps): JSX.Element {
   const labels = copy[locale];
-  const [queryInput, setQueryInput] = useState('');
   const [query, setQuery] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [availableOnly, setAvailableOnly] = useState(false);
@@ -144,6 +154,7 @@ export function PublicCatalog({
   const [availableBooks, setAvailableBooks] = useState<PublicBook[] | null>(null);
   const [newBooks, setNewBooks] = useState<PublicBook[] | null>(null);
   const [popularBooks, setPopularBooks] = useState<PublicBook[] | null>(null);
+  const [campusBooks, setCampusBooks] = useState<PublicBook[] | null>(null);
   const [catalog, setCatalog] = useState<PublicCatalogResult | null>(null);
   const [discoveryError, setDiscoveryError] = useState('');
   const [catalogError, setCatalogError] = useState('');
@@ -155,11 +166,12 @@ export function PublicCatalog({
     setDiscoveryError('');
     void Promise.all([
       apiRequest<PublicCategory[]>('/categories'),
-      apiRequest<PublicCatalogResult>(booksPath({ limit: 5, available: true })),
-      apiRequest<PublicCatalogResult>(booksPath({ limit: 5, sort: 'newest' })),
+      apiRequest<PublicCatalogResult>(booksPath({ limit: 6, available: true })),
+      apiRequest<PublicCatalogResult>(booksPath({ limit: 6, sort: 'newest' })),
       apiRequest<PublicCatalogResult>(booksPath({ limit: 12 })),
+      apiRequest<PublicCatalogResult>(booksPath({ limit: 6, available: true, campus: true })),
     ])
-      .then(([categoryData, availableData, newData, popularData]) => {
+      .then(([categoryData, availableData, newData, popularData, campusData]) => {
         if (!active) return;
         setCategories(categoryData);
         setAvailableBooks(availableData.items);
@@ -167,8 +179,9 @@ export function PublicCatalog({
         setPopularBooks(
           [...popularData.items]
             .sort((first, second) => (second.borrowCount || 0) - (first.borrowCount || 0))
-            .slice(0, 5),
+            .slice(0, 6),
         );
+        setCampusBooks(campusData.items);
       })
       .catch((reason: unknown) => {
         if (active) setDiscoveryError(requestMessage(reason));
@@ -184,7 +197,6 @@ export function PublicCatalog({
       const params = new URLSearchParams(window.location.search);
       const urlQuery = params.get('q') || '';
       const urlCategoryId = params.get('categoryId') || '';
-      setQueryInput(urlQuery);
       setQuery(urlQuery);
       setCategoryId(urlCategoryId);
       setPage(1);
@@ -225,20 +237,12 @@ export function PublicCatalog({
     return loadCatalog();
   }, [catalogRetry, loadCatalog, showFullCatalog]);
 
-  const submitSearch = (event: FormEvent) => {
-    event.preventDefault();
-    setPage(1);
-    const nextQuery = queryInput.trim();
-    setQuery(nextQuery);
-    if (!showFullCatalog) go(nextQuery ? `/books?q=${encodeURIComponent(nextQuery)}` : '/books');
-  };
   const chooseCategory = (id: string) => {
     setPage(1);
     setCategoryId(id);
     if (!showFullCatalog) go('/books');
   };
   const resetFilters = () => {
-    setQueryInput('');
     setQuery('');
     setCategoryId('');
     setAvailableOnly(false);
@@ -253,12 +257,14 @@ export function PublicCatalog({
     <section className="public-catalog">
       <HeroBanner
         locale={locale}
-        query={queryInput}
-        categoryId={categoryId}
-        categories={categories}
-        onQueryChange={setQueryInput}
-        onCategoryChange={chooseCategory}
-        onSubmit={submitSearch}
+        onBrowseBooks={() => {
+          if (!showFullCatalog) {
+            go('/books');
+            return;
+          }
+          document.getElementById('full-catalog-heading')?.scrollIntoView({ block: 'start' });
+        }}
+        onCampus={() => go('/campus')}
       />
 
       {discoveryError ? (
@@ -298,6 +304,17 @@ export function PublicCatalog({
             go={go}
             loadingLabel={labels.loading}
             tone="popular"
+          />
+          <BookShelfSection
+            id="campus-library"
+            title={labels.campus}
+            description={labels.campusDescription}
+            books={campusBooks}
+            locale={locale}
+            go={go}
+            loadingLabel={labels.loading}
+            tone="campus"
+            actionPath="/campus"
           />
           <BookShelfSection
             id="available-now"
@@ -345,7 +362,6 @@ export function PublicCatalog({
                   aria-label={`${labels.removeFilter}: ${query}`}
                   onClick={() => {
                     setQuery('');
-                    setQueryInput('');
                     setPage(1);
                   }}
                 >
@@ -354,10 +370,10 @@ export function PublicCatalog({
               )}
               {categoryId && (
                 <button
-                  aria-label={`${labels.removeFilter}: ${locale === 'ar' ? selectedCategory?.nameAr : selectedCategory?.nameEn}`}
+                  aria-label={`${labels.removeFilter}: ${selectedCategory ? publicCategoryName(selectedCategory, locale) : ''}`}
                   onClick={() => chooseCategory('')}
                 >
-                  {locale === 'ar' ? selectedCategory?.nameAr : selectedCategory?.nameEn}{' '}
+                  {selectedCategory ? publicCategoryName(selectedCategory, locale) : ''}{' '}
                   <span aria-hidden="true">×</span>
                 </button>
               )}

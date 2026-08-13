@@ -2,7 +2,7 @@
   "name": "smart-library",
   "version": "0.1.0",
   "private": true,
-  "description": "Smart Library Management System monorepo",
+  "description": "NAWA Unified Knowledge Platform monorepo",
   "workspaces": [
     "apps/backend",
     "apps/frontend"

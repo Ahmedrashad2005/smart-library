@@ -10,7 +10,20 @@ White and very light neutral surfaces are the default. Use compact, elegant spac
 
 ## Approved public-page composition
 
-The public homepage follows this order: slim utility bar, main brand/navigation/search header, split hero with book imagery and message, real hero search, inline trust row, real category icon strip, `New releases`, `Most read`, and `Available now` book shelves, then the four-item service feature strip. `/books` preserves the same identity and adds the functional searchable, filterable, paginated full catalog. Do not display fake purchase or catalog controls; unsupported reference destinations may appear only as clearly non-interactive navigation text until their scheduled phase.
+The public homepage follows this order: slim utility bar, main brand/navigation/search header, split hero with book imagery and message, real hero search, inline trust row, real category icon strip, `New releases`, `Most read`, `From your Campus Library`, and `Available now` book shelves, then the four-item service feature strip. `/books` preserves the same identity and adds the functional searchable, filterable, paginated full catalog. Do not display fake purchase or catalog controls; unsupported reference destinations may appear only as clearly non-interactive navigation text until their scheduled phase.
+
+## Mature marketplace retail structure
+
+The approved high-traffic bookstore reference informs information hierarchy, density, header proportions, category browsing, and shelf rhythm only. It does not authorize copying another retailer's branding, artwork, icons, catalog text, proprietary assets, or trade dress. NAWA remains visibly and semantically NAWA at every viewport.
+
+- Desktop uses a compact two-row header: a 44–50px utility row and an 82–94px main row. The NAWA logo occupies roughly 190–220px, location and browse controls remain subordinate to the flexible catalog search, and intentionally circular controls are limited to true icon actions.
+- The hero retains the approved NAWA illustration, copy, search, and trust facts, but stays compact enough that categories and products enter the first retail reading sequence quickly. Mobile uses a dedicated compact composition rather than a mechanically shrunken desktop hero.
+- Category labels are public, localized, and concise. Internal inventory names never appear in Store browsing. The rail preserves touch, keyboard, RTL/LTR scrolling, named navigation buttons, and a visible pressed state.
+- Homepage shelves use subtle separators and content rhythm instead of placing every shelf inside a large floating card. A normal desktop view should show approximately five to seven compact products when real data permits it.
+- Book media uses a portrait `2:3` ratio. A missing or failed image uses the shared deterministic NAWA physical-cover fallback, never a generic landscape tile or an invented external image.
+- Campus remains an integrated retail shelf and a focused catalog route. It uses the same book cards, safe real availability, and real Floor 3 / Room 315 hierarchy. It is not presented as a separate dashboard, and it never implies reservation behavior before that phase exists.
+- Book Details uses a retail acquisition composition: portrait cover, readable bibliographic information, and a distinct safe Campus availability panel. Store and Campus information remain clear without fake purchase, reservation, or pickup actions.
+- Default page background is `#FAFBFD`; routine content surfaces are white, and warm editorial emphasis may use `#FFF9F4`. Thin borders, 12–16px card radii, and minimal shadows are preferred over nested cards, oversized pills, or floating panels.
 
 ## Design tokens
 

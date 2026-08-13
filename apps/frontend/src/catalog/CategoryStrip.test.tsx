@@ -85,4 +85,50 @@ describe('CategoryStrip', () => {
     await waitFor(() => expect(next).toBeDisabled());
     expect(previous).toBeEnabled();
   });
+
+  it('replaces internal Campus inventory wording with a clean public label', () => {
+    render(
+      <CategoryStrip
+        locale="ar"
+        categories={[
+          {
+            id: 'campus-category',
+            nameEn: 'Campus inventory — uncategorized',
+            nameAr: 'مخزون الكلية — غير مصنف',
+            slug: 'campus-uncategorized',
+          },
+          {
+            id: 'campus-cyber',
+            nameEn: 'Cyber Security and Communication',
+            nameAr: 'الأمن السيبراني والاتصالات',
+            slug: 'campus-cyber-security-communication',
+          },
+          {
+            id: 'campus-ai',
+            nameEn: 'AI / General Programming / ML-DL / Processing',
+            nameAr: 'الذكاء الاصطناعي والبرمجة والتعلم الآلي والمعالجة',
+            slug: 'campus-ai-programming-ml-processing',
+          },
+        ]}
+        selectedId=""
+        loadingLabel="جار التحميل"
+        emptyLabel="لا توجد تصنيفات"
+        heading="تصفح حسب التصنيف"
+        onSelect={vi.fn()}
+      />,
+    );
+
+    const campus = screen.getByRole('button', {
+      name: 'تصفح حسب التصنيف: كتب مكتبة الكلية',
+    });
+    expect(campus).toHaveAttribute('title', 'كتب مكتبة الكلية');
+    expect(
+      screen.getByRole('button', { name: 'تصفح حسب التصنيف: الأمن السيبراني' }),
+    ).toHaveAttribute('title', 'الأمن السيبراني');
+    expect(
+      screen.getByRole('button', { name: 'تصفح حسب التصنيف: الذكاء الاصطناعي والبرمجة' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/مخزون الكلية/)).not.toBeInTheDocument();
+    expect(screen.queryByText('الأمن السيبراني والاتصالات')).not.toBeInTheDocument();
+  });
 });

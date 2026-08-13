@@ -26,6 +26,12 @@ const availableBook: PublicBook = {
   borrowCount: 12,
   category: categories[0],
   authors: [{ author: { id: 'author-one', name: 'Maya Stone', nameAr: 'مايا ستون' } }],
+  campusAvailability: {
+    hasPhysicalCopies: true,
+    totalCopies: 1,
+    availableCopies: 1,
+    availabilityStatus: 'AVAILABLE',
+  },
 };
 const unavailableBook: PublicBook = {
   id: 'book-moon',
@@ -55,8 +61,9 @@ function result(
 function successfulApi(fullCatalog = result([availableBook, unavailableBook])): void {
   mockedApi.mockImplementation(async (path: string) => {
     if (path === '/categories') return categories;
-    if (path.includes('limit=5&available=true')) return result([availableBook]);
-    if (path.includes('limit=5&sort=newest')) return result([unavailableBook]);
+    if (path.includes('campus=true')) return result([availableBook]);
+    if (path.includes('limit=6&available=true')) return result([availableBook]);
+    if (path.includes('limit=6&sort=newest')) return result([unavailableBook]);
     if (path.includes('limit=12')) return result([unavailableBook, availableBook]);
     return fullCatalog;
   });
@@ -87,7 +94,9 @@ describe('PublicCatalog', () => {
       'src',
       availableBook.coverImageUrl,
     );
-    expect(within(catalog).getByRole('img', { name: 'No cover available' })).toBeInTheDocument();
+    expect(
+      within(catalog).getByRole('img', { name: 'No cover available: Moon Atlas' }),
+    ).toBeInTheDocument();
     expect(within(catalog).getByLabelText('2 available · 4 copies')).toBeInTheDocument();
     expect(within(catalog).getByLabelText('Currently unavailable · 2 copies')).toBeInTheDocument();
 
@@ -97,18 +106,19 @@ describe('PublicCatalog', () => {
     expect(go).toHaveBeenCalledWith('/books/the-blue-book');
   });
 
-  it('submits the search form to the real catalog query boundary', async () => {
+  it('keeps global search in the header and routes both real Hero discovery actions', async () => {
     successfulApi();
+    const go = vi.fn();
     const user = userEvent.setup();
-    render(<PublicCatalog locale="en" go={vi.fn()} />);
-    await within(fullCatalogRegion()).findByRole('heading', { name: 'The Blue Book' });
+    render(<PublicCatalog locale="en" go={go} showFullCatalog={false} />);
+    await screen.findByRole('heading', { name: 'New releases' });
 
-    await user.type(screen.getByLabelText('Search the NAWA catalog'), 'world history');
-    await user.click(screen.getByRole('button', { name: 'Search' }));
+    expect(screen.queryByRole('search')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Browse books' }));
+    await user.click(screen.getByRole('button', { name: 'Campus Library' }));
 
-    await waitFor(() =>
-      expect(mockedApi).toHaveBeenCalledWith(expect.stringContaining('q=world+history')),
-    );
+    expect(go).toHaveBeenNthCalledWith(1, '/books');
+    expect(go).toHaveBeenNthCalledWith(2, '/campus');
   });
 
   it('selects a real category and reloads the catalog with its id', async () => {
@@ -231,22 +241,64 @@ describe('PublicCatalog', () => {
     document.documentElement.lang = 'ar';
     document.documentElement.dir = 'rtl';
     successfulApi();
-    const { container } = render(
-      <PublicCatalog locale="ar" go={vi.fn()} showFullCatalog={false} />,
-    );
+    const go = vi.fn();
+    const user = userEvent.setup();
+    const { container } = render(<PublicCatalog locale="ar" go={go} showFullCatalog={false} />);
 
+    expect(screen.getByRole('heading', { name: 'اكتشف كل ما ينمّي معرفتك' })).toBeInTheDocument();
+    const newHeading = await screen.findByRole('heading', { name: 'إصدارات جديدة' });
+    const popularHeading = screen.getByRole('heading', { name: 'الأكثر قراءة' });
+    const availableHeading = screen.getByRole('heading', { name: 'متاح الآن' });
+    const campusShelf = (await screen.findByRole('heading', { name: 'من مكتبة كليتك' })).closest(
+      '.book-shelf-section',
+    ) as HTMLElement;
     expect(
-      screen.getByRole('heading', { name: 'اكتشف عالم المعرفة بين يديك' }),
-    ).toBeInTheDocument();
-    expect(await screen.findByRole('heading', { name: 'إصدارات جديدة' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'الأكثر قراءة' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'متاح الآن' })).toBeInTheDocument();
+      newHeading.compareDocumentPosition(popularHeading) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      popularHeading.compareDocumentPosition(campusShelf) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      campusShelf.compareDocumentPosition(availableHeading) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(within(campusShelf).getByText('في مكتبة الكلية')).toBeInTheDocument();
+    await user.click(within(campusShelf).getByRole('button', { name: 'عرض الكل' }));
+    expect(go).toHaveBeenCalledWith('/campus');
     expect(screen.getByRole('region', { name: 'خدمات نَوَى' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'تصفح الكتب' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'مكتبة الكلية' })).toBeInTheDocument();
+    expect(screen.queryByRole('search')).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'الفهرس الكامل' })).not.toBeInTheDocument();
     expect(container.querySelector('.nawa-hero__illustration')).toHaveAttribute(
       'aria-hidden',
       'true',
     );
+  });
+
+  it('renders six real products in a desktop-ready discovery shelf', async () => {
+    const shelfBooks = Array.from({ length: 6 }, (_, index): PublicBook => ({
+      ...availableBook,
+      id: `book-${index + 1}`,
+      slug: `book-${index + 1}`,
+      title: `Book ${index + 1}`,
+      titleAr: `كتاب ${index + 1}`,
+      coverImageUrl: undefined,
+      borrowCount: 20 - index,
+    }));
+    mockedApi.mockImplementation(async (path: string) => {
+      if (path === '/categories') return categories;
+      return result(shelfBooks);
+    });
+
+    render(<PublicCatalog locale="en" go={vi.fn()} showFullCatalog={false} />);
+
+    const newReleases = (await screen.findByRole('heading', { name: 'New releases' })).closest(
+      '.book-shelf-section',
+    ) as HTMLElement;
+    expect(within(newReleases).getAllByRole('article')).toHaveLength(6);
+    expect(mockedApi).toHaveBeenCalledWith('/books?limit=6&sort=newest');
+    expect(mockedApi).toHaveBeenCalledWith('/books?limit=6&available=true');
+    expect(mockedApi).toHaveBeenCalledWith('/books?limit=6&available=true&campus=true');
   });
 
   it('derives the most-read shelf from the existing borrow count data', async () => {
@@ -270,7 +322,9 @@ describe('PublicCatalog', () => {
     await waitFor(() =>
       expect(mockedApi).toHaveBeenCalledWith(expect.stringContaining('q=knowledge')),
     );
-    expect(screen.getByLabelText('Search the NAWA catalog')).toHaveValue('knowledge');
+    expect(
+      await screen.findByRole('button', { name: 'Remove filter: knowledge' }),
+    ).toBeInTheDocument();
   });
 
   it('synchronizes a header category selection into the existing catalog filter', async () => {

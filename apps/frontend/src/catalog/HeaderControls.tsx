@@ -45,7 +45,7 @@ export function HeaderSearch({ locale, value, onChange, onSubmit }: SearchProps)
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
       />
-      <button className="header-search__submit" aria-label={label}>
+      <button type="submit" className="header-search__submit" aria-label={label}>
         <PublicIcon name="search" />
       </button>
     </form>
@@ -168,7 +168,13 @@ export function HeaderActionButton({
 }): JSX.Element {
   const label = locale === 'ar' ? 'الوصول السريع إلى إعاراتي' : 'Quick access to my loans';
   return (
-    <button type="button" className="header-primary-action" aria-label={label} onClick={onClick}>
+    <button
+      type="button"
+      className="header-primary-action"
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+    >
       <PublicIcon name="book" />
     </button>
   );

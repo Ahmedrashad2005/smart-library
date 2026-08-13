@@ -14,6 +14,31 @@ export type PublicCategory = {
   slug: string;
 };
 
+const publicCategoryLabels: Record<string, { en: string; ar: string }> = {
+  'campus-uncategorized': {
+    en: 'Campus Library books',
+    ar: 'كتب مكتبة الكلية',
+  },
+  'campus-cyber-security-communication': {
+    en: 'Cyber security',
+    ar: 'الأمن السيبراني',
+  },
+  'campus-bio-informatics': {
+    en: 'Bioinformatics',
+    ar: 'المعلوماتية الحيوية',
+  },
+  'campus-ai-programming-ml-processing': {
+    en: 'AI & programming',
+    ar: 'الذكاء الاصطناعي والبرمجة',
+  },
+};
+
+export function publicCategoryName(category: PublicCategory, locale: PublicLocale): string {
+  const publicLabel = publicCategoryLabels[category.slug];
+  if (publicLabel) return publicLabel[locale];
+  return locale === 'ar' ? category.nameAr : category.nameEn;
+}
+
 export type PublicAuthor = {
   id: string;
   name: string;
@@ -35,6 +60,12 @@ export type PublicBook = {
   availableCopies: number;
   category?: PublicCategory;
   authors: Array<{ author: PublicAuthor }>;
+  campusAvailability?: {
+    hasPhysicalCopies: boolean;
+    totalCopies: number;
+    availableCopies: number;
+    availabilityStatus: 'AVAILABLE' | 'UNAVAILABLE' | 'NOT_HELD';
+  };
 };
 
 export type PublicCatalogResult = {
@@ -43,4 +74,5 @@ export type PublicCatalogResult = {
   page: number;
   limit: number;
   totalPages: number;
+  sourceCollections?: string[];
 };

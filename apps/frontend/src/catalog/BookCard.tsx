@@ -1,10 +1,13 @@
-import type { PublicBook, PublicLocale } from './public.types';
+import { BookCoverMedia } from './BookCoverMedia';
+import { publicCategoryName, type PublicBook, type PublicLocale } from './public.types';
+import { PublicIcon } from './PublicIcon';
 
 type BookCardProps = {
   book: PublicBook;
   locale: PublicLocale;
   go: (to: string) => void;
   compact?: boolean;
+  availabilityScope?: 'catalog' | 'campus';
 };
 
 const text = {
@@ -12,23 +15,29 @@ const text = {
     available: 'available',
     unavailable: 'Currently unavailable',
     copies: 'copies',
+    copy: 'copy',
     details: 'View details',
     by: 'By',
     noAuthor: 'Author not listed',
     noCover: 'No cover available',
     coverOf: 'Cover of',
     category: 'Uncategorized',
+    campusAvailable: 'Available in the Campus Library',
+    campusUnavailable: 'Currently unavailable in the Campus Library',
   },
   ar: {
     available: 'متاح',
     unavailable: 'غير متاح حالياً',
     copies: 'نسخ',
+    copy: 'نسخة',
     details: 'عرض التفاصيل',
     by: 'تأليف',
     noAuthor: 'المؤلف غير مذكور',
     noCover: 'لا توجد صورة غلاف',
     coverOf: 'غلاف كتاب',
     category: 'غير مصنف',
+    campusAvailable: 'متاح في مكتبة الكلية',
+    campusUnavailable: 'غير متاح حاليًا في مكتبة الكلية',
   },
 } as const;
 
@@ -39,21 +48,38 @@ function localTitle(book: PublicBook, locale: PublicLocale): string {
 function authorNames(book: PublicBook, locale: PublicLocale): string {
   return book.authors
     .map(({ author }) => (locale === 'ar' ? author.nameAr || author.name : author.name))
-    .join('، ');
+    .join(locale === 'ar' ? '، ' : ', ');
 }
 
-export function BookCard({ book, locale, go, compact = false }: BookCardProps): JSX.Element {
+export function BookCard({
+  book,
+  locale,
+  go,
+  compact = false,
+  availabilityScope = 'catalog',
+}: BookCardProps): JSX.Element {
   const labels = text[locale];
   const title = localTitle(book, locale);
   const authors = authorNames(book, locale) || labels.noAuthor;
-  const category =
-    locale === 'ar'
-      ? book.category?.nameAr || book.category?.nameEn || labels.category
-      : book.category?.nameEn || labels.category;
-  const available = book.availableCopies > 0;
+  const firstAuthor = book.authors[0]?.author;
+  const fallbackAuthor = firstAuthor
+    ? locale === 'ar'
+      ? firstAuthor.nameAr || firstAuthor.name
+      : firstAuthor.name
+    : '';
+  const category = (book.category && publicCategoryName(book.category, locale)) || labels.category;
+  const campus = book.campusAvailability?.hasPhysicalCopies === true;
+  const campusAvailable = (book.campusAvailability?.availableCopies ?? 0) > 0;
+  const availableCopies =
+    availabilityScope === 'campus'
+      ? (book.campusAvailability?.availableCopies ?? 0)
+      : book.availableCopies;
+  const totalCopies =
+    availabilityScope === 'campus' ? (book.campusAvailability?.totalCopies ?? 0) : book.totalCopies;
+  const available = availableCopies > 0;
   const availability = available
-    ? `${book.availableCopies} ${labels.available} · ${book.totalCopies} ${labels.copies}`
-    : `${labels.unavailable} · ${book.totalCopies} ${labels.copies}`;
+    ? `${availableCopies} ${labels.available} · ${totalCopies} ${totalCopies === 1 ? labels.copy : labels.copies}`
+    : `${labels.unavailable} · ${totalCopies} ${totalCopies === 1 ? labels.copy : labels.copies}`;
 
   return (
     <article
@@ -61,19 +87,30 @@ export function BookCard({ book, locale, go, compact = false }: BookCardProps): 
       aria-label={`${title}. ${availability}`}
     >
       <div className="catalog-book-card__cover">
-        {book.coverImageUrl ? (
-          <img src={book.coverImageUrl} alt={`${labels.coverOf} ${title}`} />
-        ) : (
-          <span className="no-cover" role="img" aria-label={labels.noCover}>
-            <span aria-hidden="true">{title.slice(0, 1)}</span>
-            <small>{labels.noCover}</small>
-          </span>
-        )}
+        <BookCoverMedia
+          key={book.coverImageUrl || 'fallback'}
+          url={book.coverImageUrl}
+          title={title}
+          author={fallbackAuthor}
+          coverLabel={`${labels.coverOf} ${title}`}
+          noCoverLabel={`${labels.noCover}: ${title}`}
+          variantKey={book.id}
+        />
       </div>
       <div className="catalog-book-card__body">
+        {campus && (
+          <span
+            className={`campus-book-badge${campusAvailable ? ' is-available' : ' is-unavailable'}`}
+          >
+            <PublicIcon name="book" />
+            {campusAvailable ? labels.campusAvailable : labels.campusUnavailable}
+          </span>
+        )}
         <span className="category-label">{category}</span>
-        <h3>{title}</h3>
-        <p className="catalog-book-card__authors">
+        <h3 dir="auto" title={title}>
+          {title}
+        </h3>
+        <p className="catalog-book-card__authors" dir="auto" title={authors}>
           <span className="sr-only">{labels.by} </span>
           {authors}
         </p>
@@ -85,6 +122,7 @@ export function BookCard({ book, locale, go, compact = false }: BookCardProps): 
           {availability}
         </p>
         <button
+          type="button"
           className="catalog-book-card__action"
           aria-label={`${labels.details}: ${title}`}
           onClick={() => go(`/books/${book.slug}`)}

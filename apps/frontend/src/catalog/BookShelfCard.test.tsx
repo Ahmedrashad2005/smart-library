@@ -51,6 +51,33 @@ describe('BookShelfCard', () => {
     expect(screen.getByRole('img', { name: `لا يوجد غلاف: ${book.titleAr}` })).toHaveClass(
       variant!,
     );
+
+    rerender(
+      <BookShelfCard
+        book={{ ...withoutCover, id: 'book-knowledge-02' }}
+        locale="ar"
+        go={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('img', { name: `لا يوجد غلاف: ${book.titleAr}` })).not.toHaveClass(
+      variant!,
+    );
+  });
+
+  it('keeps English fallback metadata correctly directed inside Arabic RTL', () => {
+    const englishFallback: PublicBook = {
+      ...book,
+      titleAr: undefined,
+      authors: [{ author: { id: 'author-1', name: 'Maya Stone' } }],
+    };
+
+    render(<BookShelfCard book={englishFallback} locale="ar" go={vi.fn()} />);
+
+    expect(screen.getByRole('heading', { name: 'A Journey Through Knowledge' })).toHaveAttribute(
+      'dir',
+      'auto',
+    );
+    expect(screen.getByText('Maya Stone')).toHaveAttribute('dir', 'auto');
   });
 
   it('falls back gracefully when a supplied cover image cannot load', () => {
@@ -62,5 +89,21 @@ describe('BookShelfCard', () => {
       screen.getByRole('img', { name: 'No cover: A Journey Through Knowledge' }),
     ).toBeInTheDocument();
     expect(screen.queryByAltText('A Journey Through Knowledge cover')).not.toBeInTheDocument();
+  });
+
+  it('shows Campus holding availability without changing the existing details action', () => {
+    const campusBook: PublicBook = {
+      ...book,
+      campusAvailability: {
+        hasPhysicalCopies: true,
+        totalCopies: 1,
+        availableCopies: 1,
+        availabilityStatus: 'AVAILABLE',
+      },
+    };
+    render(<BookShelfCard book={campusBook} locale="en" go={vi.fn()} campusScope />);
+
+    expect(screen.getByText('Campus Library')).toHaveClass('shelf-campus-badge', 'is-available');
+    expect(screen.getByText('Available', { selector: '.shelf-available' })).toBeInTheDocument();
   });
 });

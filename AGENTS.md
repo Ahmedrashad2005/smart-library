@@ -1,10 +1,12 @@
-# Smart Library — Permanent Project Guide
+# NAWA Unified Knowledge Platform — Permanent Project Guide
 
 ## Source of truth and scope
 
-The complete specification at `/home/ahmed/Desktop/python videos/4-lists/Smart Library Management System.pdf` is the permanent product source of truth. Resolve implementation decisions against it before changing behavior. This file records its enduring engineering rules; it does not reduce the specification.
+The complete specification at `/home/ahmed/Desktop/python videos/4-lists/Smart Library Management System.pdf` remains the original functional source of truth. The approved NAWA product-evolution and phase instructions extend it and take precedence where the old public product framing conflicts with the current direction. This file records enduring engineering rules; it does not reduce either source.
 
-The project is a production-style Smart Library Management System, not a mock-up. Implement features in the required phases in `docs/implementation-plan.md`. Do not add fake controls, placeholder product flows, or TODOs for required functionality. Preserve useful existing code and keep changes scoped to the active phase.
+The current product is **NAWA — Unified Knowledge Platform**, not a mock-up. Its long-term structure is NAWA Store (knowledge marketplace), NAWA Campus (physical university library), and NAWA Read (future digital reading), organized around **Buy — Borrow — Read**. The original library system is preserved as the technical foundation of NAWA Campus. Implement features in the required phases in `docs/implementation-plan.md`. Do not add fake controls, placeholder product flows, or TODOs for required functionality. Preserve useful existing code and keep changes scoped to the active phase.
+
+Do not rename internal packages, services, database identifiers, or the local repository solely for branding. Do not restore the obsolete Smart Library public UI or make the public marketplace look like library-management software. A central `Book` must remain capable of receiving Store, Campus, and later Read capabilities without becoming Campus-only.
 
 ## Monorepo and technology stack
 

@@ -27,6 +27,8 @@ export class CreateBookDto {
   @IsOptional() @IsString() descriptionAr?: string;
   @IsOptional() @IsUrl() coverImageUrl?: string;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1000) @Max(2100) publicationYear?: number;
+  @IsOptional() @IsString() sourcePublicationInfo?: string;
+  @IsOptional() @IsString() ddc?: string;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) pageCount?: number;
   @IsOptional() @IsString() language?: string;
   @IsOptional() @IsBoolean() isFeatured?: boolean;
@@ -36,11 +38,15 @@ export class CreateCopyDto {
   @IsUUID() bookId!: string;
   @IsUUID() sectionId!: string;
   @IsUUID() shelfId!: string;
+  @IsOptional() @IsUUID() homeLibraryRoomId?: string;
   @IsOptional() @IsString() copyCode?: string;
   @IsOptional() @IsString() barcode?: string;
   @IsOptional() @IsEnum(BookCopyStatus) status?: BookCopyStatus;
   @IsOptional() @IsEnum(BookCopyCondition) condition?: BookCopyCondition;
   @IsOptional() @IsDateString() acquisitionDate?: string;
+  @IsOptional() @IsString() shelfLocationCode?: string;
+  @IsOptional() @IsString() sourceInventoryReference?: string;
+  @IsOptional() @IsString() sourceCollection?: string;
   @IsOptional() @IsString() notes?: string;
 }
 export class UpdateCopyDto extends CreateCopyDto {}

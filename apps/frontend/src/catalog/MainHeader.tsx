@@ -9,7 +9,12 @@ import {
   NawaBrandLogo,
 } from './HeaderControls';
 import { PublicIcon } from './PublicIcon';
-import type { PublicCategory, PublicLocale, PublicSession } from './public.types';
+import {
+  publicCategoryName,
+  type PublicCategory,
+  type PublicLocale,
+  type PublicSession,
+} from './public.types';
 
 type Props = {
   locale: PublicLocale;
@@ -24,13 +29,12 @@ const copy = {
     books: 'الكتب',
     categories: 'تصفح الأقسام',
     allCategories: 'كل الأقسام',
-    brands: 'العلامات التجارية',
     menu: 'فتح قائمة نَوَى',
     closeMenu: 'إغلاق قائمة نَوَى',
     navigation: 'التنقل الرئيسي',
-    later: 'قريبًا — لا تتوفر تصفية العلامات التجارية حاليًا',
     workspace: 'مساحة العمل',
     myLoans: 'إعاراتي',
+    campus: 'مكتبة الكلية',
     loadingCategories: 'جارٍ تحميل الأقسام…',
     categoriesError: 'تعذر تحميل الأقسام.',
   },
@@ -39,13 +43,12 @@ const copy = {
     books: 'Books',
     categories: 'Browse categories',
     allCategories: 'All categories',
-    brands: 'Brands',
     menu: 'Open NAWA menu',
     closeMenu: 'Close NAWA menu',
     navigation: 'Main navigation',
-    later: 'Coming soon — brand filtering is not available yet',
     workspace: 'Workspace',
     myLoans: 'My loans',
+    campus: 'Campus Library',
     loadingCategories: 'Loading categories…',
     categoriesError: 'Categories could not be loaded.',
   },
@@ -152,6 +155,15 @@ export function MainHeader({ locale, currentPath, session, go }: Props): JSX.Ele
               <PublicIcon name="categories" />
               {labels.allCategories}
             </button>
+            <button
+              type="button"
+              role="menuitem"
+              className="header-campus-entry"
+              onClick={() => navigate('/campus')}
+            >
+              <PublicIcon name="book" />
+              {labels.campus}
+            </button>
             {categoryLoading && (
               <p role="status" className="header-dropdown__status">
                 {labels.loadingCategories}
@@ -170,21 +182,10 @@ export function MainHeader({ locale, currentPath, session, go }: Props): JSX.Ele
                 onClick={() => selectCategory(category.id)}
               >
                 <PublicIcon name="book" />
-                {locale === 'ar' ? category.nameAr : category.nameEn}
+                {publicCategoryName(category, locale)}
               </button>
             ))}
           </HeaderDropdownPill>
-        </div>
-
-        <div className="header-dropdown--brands">
-          <HeaderDropdownPill
-            id="header-brands-menu"
-            label={labels.brands}
-            open={false}
-            onToggle={() => undefined}
-            disabled
-            disabledReason={labels.later}
-          />
         </div>
 
         <HeaderActionButton locale={locale} onClick={() => navigate('/my-loans')} />
@@ -201,6 +202,10 @@ export function MainHeader({ locale, currentPath, session, go }: Props): JSX.Ele
           <button aria-current={current('/books')} onClick={() => navigate('/books')}>
             <PublicIcon name="book" />
             {labels.books}
+          </button>
+          <button aria-current={current('/campus')} onClick={() => navigate('/campus')}>
+            <PublicIcon name="book" />
+            {labels.campus}
           </button>
           <button onClick={navigateToCategories}>
             <PublicIcon name="categories" />

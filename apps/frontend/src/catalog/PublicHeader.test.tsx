@@ -61,7 +61,7 @@ describe('PublicHeader', () => {
       'src',
       '/brand/nawa-logo.png',
     );
-    expect(screen.getByRole('navigation', { name: 'NAWA services menu' })).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'NAWA utility navigation' })).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Main navigation' })).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Sign in or create an account' }),
@@ -69,11 +69,8 @@ describe('PublicHeader', () => {
     expect(screen.getByText('Favorites')).toBeInTheDocument();
     expect(screen.getByText('Branches')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Quick access to my loans' })).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', {
-        name: 'Brands — Coming soon — brand filtering is not available yet',
-      }),
-    ).toBeDisabled();
+    expect(screen.queryByRole('button', { name: /Brands/ })).not.toBeInTheDocument();
+    expect(screen.queryByText('Brands')).not.toBeInTheDocument();
   });
 
   it('renders the approved Arabic-first utility copy and RTL account treatment', () => {
@@ -111,12 +108,13 @@ describe('PublicHeader', () => {
 
   it('opens and closes the keyboard-accessible mobile navigation', async () => {
     const user = userEvent.setup();
+    const go = vi.fn();
     render(
       <PublicHeader
         locale="en"
         currentPath="/books"
         session={null}
-        go={vi.fn()}
+        go={go}
         onLanguageChange={vi.fn()}
         onSignOut={vi.fn()}
       />,
@@ -131,6 +129,10 @@ describe('PublicHeader', () => {
     await user.keyboard('{Escape}');
     expect(menu).toHaveAttribute('aria-expanded', 'false');
     expect(navigation).not.toHaveClass('is-open');
+
+    await user.click(menu);
+    await user.click(within(navigation).getByRole('button', { name: 'Campus Library' }));
+    expect(go).toHaveBeenCalledWith('/campus');
   });
 
   it('submits the real marketplace search to the catalog route', async () => {
@@ -176,6 +178,27 @@ describe('PublicHeader', () => {
     await user.click(within(menu).getByRole('menuitem', { name: 'History' }));
 
     expect(go).toHaveBeenCalledWith('/books?categoryId=history');
+  });
+
+  it('exposes Campus Library as a first-class category-menu destination', async () => {
+    const go = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <PublicHeader
+        locale="en"
+        currentPath="/"
+        session={null}
+        go={go}
+        onLanguageChange={vi.fn()}
+        onSignOut={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Browse categories', expanded: false }));
+    const menu = await screen.findByRole('menu', { name: 'Browse categories' });
+    await user.click(within(menu).getByRole('menuitem', { name: 'Campus Library' }));
+
+    expect(go).toHaveBeenCalledWith('/campus');
   });
 
   it('offers only real routes in the NAWA services dropdown', async () => {

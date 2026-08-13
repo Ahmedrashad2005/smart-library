@@ -5,8 +5,14 @@ import {
   PrismaClient,
   UserRole,
   UserStatus,
+  type Book,
 } from '@prisma/client';
 import * as argon2 from 'argon2';
+import {
+  campusInventoryRecords,
+  campusSourceCollections,
+  type CampusSourceCollection,
+} from './campus-inventory';
 
 const prisma = new PrismaClient();
 const password = 'SmartLib123';
@@ -60,6 +66,291 @@ const sectionNames = [
   ['KID', 'Children Corner', 'ركن الأطفال', 'G'],
 ] as const;
 
+const campusCategoryDefinitions = [
+  {
+    sourceCollection: null,
+    slug: 'campus-uncategorized',
+    nameEn: 'Campus inventory — uncategorized',
+    nameAr: 'مخزون الكلية — غير مصنف',
+  },
+  {
+    sourceCollection: campusSourceCollections.cyber,
+    slug: 'campus-cyber-security-communication',
+    nameEn: campusSourceCollections.cyber,
+    nameAr: 'الأمن السيبراني والاتصالات',
+  },
+  {
+    sourceCollection: campusSourceCollections.bio,
+    slug: 'campus-bio-informatics',
+    nameEn: campusSourceCollections.bio,
+    nameAr: 'المعلوماتية الحيوية',
+  },
+  {
+    sourceCollection: campusSourceCollections.ai,
+    slug: 'campus-ai-programming-ml-processing',
+    nameEn: campusSourceCollections.ai,
+    nameAr: 'الذكاء الاصطناعي والبرمجة والتعلم الآلي والمعالجة',
+  },
+] as const;
+
+function sourceSlug(rowNumber: number, title: string): string {
+  const normalized = title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+  return `campus-source-${String(rowNumber).padStart(2, '0')}-${normalized}`;
+}
+
+async function seedCampusInventory(): Promise<{
+  sourceRows: number;
+  newBooks: number;
+  reusedBooks: number;
+  newCopies: number;
+  missingPublicationInfo: number;
+  missingYear: number;
+  explicitSourceGroups: number;
+  ddcRecords: number;
+}> {
+  if (campusInventoryRecords.length !== 23)
+    throw new Error(
+      `Campus inventory must contain 23 source rows, found ${campusInventoryRecords.length}`,
+    );
+
+  const library = await prisma.library.upsert({
+    where: { code: 'NAWA-COLLEGE-LIBRARY' },
+    update: {
+      nameEn: 'College Library',
+      nameAr: 'مكتبة الكلية',
+      building: null,
+      isActive: true,
+    },
+    create: {
+      code: 'NAWA-COLLEGE-LIBRARY',
+      nameEn: 'College Library',
+      nameAr: 'مكتبة الكلية',
+    },
+  });
+  const floor = await prisma.libraryFloor.upsert({
+    where: { libraryId_floorNumber: { libraryId: library.id, floorNumber: 3 } },
+    update: {
+      nameEn: 'Third Floor',
+      nameAr: 'الدور الثالث',
+      sortOrder: 3,
+      isActive: true,
+    },
+    create: {
+      libraryId: library.id,
+      floorNumber: 3,
+      nameEn: 'Third Floor',
+      nameAr: 'الدور الثالث',
+      sortOrder: 3,
+    },
+  });
+  const room = await prisma.libraryRoom.upsert({
+    where: { floorId_roomNumber: { floorId: floor.id, roomNumber: '315' } },
+    update: { nameEn: 'Room 315', nameAr: 'غرفة 315', isActive: true },
+    create: {
+      floorId: floor.id,
+      roomNumber: '315',
+      nameEn: 'Room 315',
+      nameAr: 'غرفة 315',
+    },
+  });
+
+  const categoriesByCollection = new Map<CampusSourceCollection, { id: string }>();
+  const locationsByCollection = new Map<
+    CampusSourceCollection,
+    { sectionId: string; shelfId: string }
+  >();
+  for (const [index, definition] of campusCategoryDefinitions.entries()) {
+    const category = await prisma.category.upsert({
+      where: { slug: definition.slug },
+      update: {
+        nameEn: definition.nameEn,
+        nameAr: definition.nameAr,
+        isArchived: false,
+        deletedAt: null,
+      },
+      create: {
+        slug: definition.slug,
+        nameEn: definition.nameEn,
+        nameAr: definition.nameAr,
+      },
+    });
+    categoriesByCollection.set(definition.sourceCollection, category);
+
+    const sectionCode = `NAWA-CAMPUS-${String(index + 1).padStart(2, '0')}`;
+    const section = await prisma.librarySection.upsert({
+      where: { code: sectionCode },
+      update: {
+        roomId: room.id,
+        nameEn: definition.nameEn,
+        nameAr: definition.nameAr,
+        floor: '3',
+        room: '315',
+        isArchived: false,
+        deletedAt: null,
+      },
+      create: {
+        roomId: room.id,
+        code: sectionCode,
+        nameEn: definition.nameEn,
+        nameAr: definition.nameAr,
+        floor: '3',
+        room: '315',
+      },
+    });
+    const shelf = await prisma.shelf.upsert({
+      where: { sectionId_code: { sectionId: section.id, code: `${sectionCode}-HOLDING` } },
+      update: {
+        nameEn: 'Campus inventory holding',
+        nameAr: 'حيازة مخزون الكلية',
+        isArchived: false,
+        deletedAt: null,
+      },
+      create: {
+        sectionId: section.id,
+        code: `${sectionCode}-HOLDING`,
+        nameEn: 'Campus inventory holding',
+        nameAr: 'حيازة مخزون الكلية',
+        descriptionEn: 'Organizational anchor only; the source shelf code is stored on each copy.',
+        descriptionAr: 'رابط تنظيمي فقط؛ يُحفظ رمز الرف الأصلي على كل نسخة.',
+      },
+    });
+    locationsByCollection.set(definition.sourceCollection, {
+      sectionId: section.id,
+      shelfId: shelf.id,
+    });
+  }
+
+  let newBooks = 0;
+  let reusedBooks = 0;
+  let newCopies = 0;
+  for (const record of campusInventoryRecords) {
+    const sourceInventoryReference = `NAWA-CAMPUS-PDF-${String(record.rowNumber).padStart(3, '0')}`;
+    let author = await prisma.author.findFirst({
+      where: { name: { equals: record.author, mode: 'insensitive' } },
+    });
+    author = author
+      ? await prisma.author.update({
+          where: { id: author.id },
+          data: { isArchived: false, deletedAt: null },
+        })
+      : await prisma.author.create({ data: { name: record.author } });
+
+    const existingCopy = await prisma.bookCopy.findUnique({
+      where: { sourceInventoryReference },
+      include: { book: true },
+    });
+    let book: Book | null = existingCopy?.book ?? null;
+    if (!book)
+      book = await prisma.book.findFirst({
+        where: {
+          title: { equals: record.title, mode: 'insensitive' },
+          publicationYear: record.publicationYear,
+          authors: { some: { authorId: author.id } },
+        },
+      });
+
+    if (book) {
+      reusedBooks += 1;
+      book = await prisma.book.update({
+        where: { id: book.id },
+        data: {
+          title: record.title,
+          publicationYear: record.publicationYear,
+          sourcePublicationInfo: record.publicationInfo,
+          ddc: record.ddc,
+          isArchived: false,
+          deletedAt: null,
+        },
+      });
+    } else {
+      const category = categoriesByCollection.get(record.sourceCollection)!;
+      book = await prisma.book.create({
+        data: {
+          title: record.title,
+          slug: sourceSlug(record.rowNumber, record.title),
+          publicationYear: record.publicationYear,
+          sourcePublicationInfo: record.publicationInfo,
+          ddc: record.ddc,
+          language: 'en',
+          categoryId: category.id,
+        },
+      });
+      newBooks += 1;
+    }
+    await prisma.bookAuthor.upsert({
+      where: { bookId_authorId: { bookId: book.id, authorId: author.id } },
+      update: {},
+      create: { bookId: book.id, authorId: author.id },
+    });
+
+    const location = locationsByCollection.get(record.sourceCollection)!;
+    const copyCode = `NAWA-CAMPUS-${String(record.rowNumber).padStart(3, '0')}`;
+    if (existingCopy) {
+      await prisma.bookCopy.update({
+        where: { id: existingCopy.id },
+        data: {
+          bookId: book.id,
+          homeLibraryRoomId: room.id,
+          sectionId: location.sectionId,
+          shelfId: location.shelfId,
+          shelfLocationCode: record.shelfLocationCode,
+          sourceCollection: record.sourceCollection,
+          isArchived: false,
+          deletedAt: null,
+        },
+      });
+    } else {
+      await prisma.bookCopy.create({
+        data: {
+          bookId: book.id,
+          homeLibraryRoomId: room.id,
+          copyCode,
+          qrCodeValue: `copy:${copyCode}`,
+          sectionId: location.sectionId,
+          shelfId: location.shelfId,
+          shelfLocationCode: record.shelfLocationCode,
+          sourceInventoryReference,
+          sourceCollection: record.sourceCollection,
+          status: BookCopyStatus.AVAILABLE,
+          condition: BookCopyCondition.GOOD,
+        },
+      });
+      newCopies += 1;
+    }
+    const activeCopies = await prisma.bookCopy.findMany({
+      where: { bookId: book.id, isArchived: false },
+      select: { status: true },
+    });
+    await prisma.book.update({
+      where: { id: book.id },
+      data: {
+        totalCopies: activeCopies.length,
+        availableCopies: activeCopies.filter((copy) => copy.status === BookCopyStatus.AVAILABLE)
+          .length,
+      },
+    });
+  }
+
+  return {
+    sourceRows: campusInventoryRecords.length,
+    newBooks,
+    reusedBooks,
+    newCopies,
+    missingPublicationInfo: campusInventoryRecords.filter((record) => !record.publicationInfo)
+      .length,
+    missingYear: campusInventoryRecords.filter((record) => !record.publicationYear).length,
+    explicitSourceGroups: new Set(
+      campusInventoryRecords.flatMap((record) =>
+        record.sourceCollection ? [record.sourceCollection] : [],
+      ),
+    ).size,
+    ddcRecords: campusInventoryRecords.filter((record) => record.ddc).length,
+  };
+}
+
 async function main(): Promise<void> {
   const passwordHash = await argon2.hash(password);
   const people = [
@@ -110,6 +401,19 @@ async function main(): Promise<void> {
       value: 8,
       type: 'NUMBER',
       description: 'Minimum account password length',
+    },
+  });
+  await prisma.systemSetting.upsert({
+    where: { key: 'reservation.pickupWindowHours' },
+    update: {
+      description: 'Hours an active Campus reservation remains available for pickup',
+      type: 'NUMBER',
+    },
+    create: {
+      key: 'reservation.pickupWindowHours',
+      value: 24,
+      type: 'NUMBER',
+      description: 'Hours an active Campus reservation remains available for pickup',
     },
   });
 
@@ -242,7 +546,7 @@ async function main(): Promise<void> {
           ? BookCopyStatus.AVAILABLE
           : [
               BookCopyStatus.BORROWED,
-              BookCopyStatus.RESERVED,
+              BookCopyStatus.AVAILABLE,
               BookCopyStatus.MAINTENANCE,
               BookCopyStatus.AVAILABLE,
             ][copyIndex % 4]!;
@@ -354,6 +658,8 @@ async function main(): Promise<void> {
       });
     }
   }
+  const campusStats = await seedCampusInventory();
+  console.info('NAWA Campus seed:', campusStats);
 }
 
 void main().finally(() => prisma.$disconnect());

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { PublicCategory, PublicLocale } from './public.types';
+import { publicCategoryName, type PublicCategory, type PublicLocale } from './public.types';
 import { PublicIcon, type PublicIconName } from './PublicIcon';
 
 type Props = {
@@ -38,7 +38,7 @@ export function CategoryStrip({
   const allLabel = locale === 'ar' ? 'شاهد الكل' : 'View all';
   const previousLabel = locale === 'ar' ? 'التصنيفات السابقة' : 'Previous categories';
   const nextLabel = locale === 'ar' ? 'التصنيفات التالية' : 'Next categories';
-  const name = (category: PublicCategory) => (locale === 'ar' ? category.nameAr : category.nameEn);
+  const name = (category: PublicCategory) => publicCategoryName(category, locale);
 
   const updateEdges = useCallback(() => {
     const scroller = scrollerRef.current;
@@ -98,12 +98,14 @@ export function CategoryStrip({
             id="category-scroller"
             className="category-scroller"
             role="group"
+            aria-orientation="horizontal"
             aria-label={heading}
             ref={scrollerRef}
             tabIndex={0}
             onScroll={updateEdges}
           >
             <button
+              type="button"
               className={`category-tile category-tile--all${selectedId === '' ? ' is-selected' : ''}`}
               aria-pressed={selectedId === ''}
               onClick={() => onSelect('')}
@@ -115,10 +117,12 @@ export function CategoryStrip({
             </button>
             {categories.slice(0, 10).map((category, index) => (
               <button
+                type="button"
                 className={`category-tile category-tile--${(index % 8) + 1}${selectedId === category.id ? ' is-selected' : ''}`}
                 key={category.id}
                 aria-label={`${heading}: ${name(category)}`}
                 aria-pressed={selectedId === category.id}
+                title={name(category)}
                 onClick={() => onSelect(category.id)}
               >
                 <span>

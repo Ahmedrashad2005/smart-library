@@ -30,6 +30,8 @@ const copy = {
     books: 'الكتب',
     borrowing: 'الاستعارة',
     categories: 'الأقسام',
+    campus: 'مكتبة الكلية',
+    utilityNavigation: 'روابط وخدمات نَوَى',
   },
   en: {
     language: 'العربية',
@@ -48,6 +50,8 @@ const copy = {
     books: 'Books',
     borrowing: 'Borrowing',
     categories: 'Categories',
+    campus: 'Campus Library',
+    utilityNavigation: 'NAWA utility navigation',
   },
 } as const;
 
@@ -83,7 +87,7 @@ export function PublicTopUtilityBar({
 
   return (
     <div className="public-utility" onKeyDown={handleKeyDown}>
-      <nav className="public-utility__inner" aria-label={labels.servicesMenu}>
+      <nav className="public-utility__inner" aria-label={labels.utilityNavigation}>
         <div className="utility-slot utility-slot--account">
           <UtilityHeaderItem
             icon="account"
@@ -161,6 +165,10 @@ export function PublicTopUtilityBar({
               <button type="button" role="menuitem" onClick={() => navigate('/books')}>
                 <PublicIcon name="book" />
                 {labels.books}
+              </button>
+              <button type="button" role="menuitem" onClick={() => navigate('/campus')}>
+                <PublicIcon name="book" />
+                {labels.campus}
               </button>
               <button type="button" role="menuitem" onClick={() => navigate('/my-loans')}>
                 <PublicIcon name="history" />

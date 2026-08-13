@@ -346,7 +346,7 @@ describe('Phase 4 borrowing lifecycle', () => {
     expect(mineItem.bookCopy.book.authors[0]).toEqual({
       id: expect.any(String),
       name: expect.any(String),
-      arabicName: expect.anything(),
+      arabicName: null,
     });
     expect(mineItem.member.passwordHash).toBeUndefined();
     expect(mineItem.issuedBy).toBeUndefined();

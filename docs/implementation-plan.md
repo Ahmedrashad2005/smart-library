@@ -1,4 +1,4 @@
-# Smart Library implementation plan
+# NAWA Unified Knowledge Platform implementation plan
 
 The full project specification is authoritative. This plan preserves its required order and makes phase completion auditable.
 
@@ -44,12 +44,118 @@ Phase 1 deliberately contains no domain schema, authentication, catalog, UI flow
 
 Reservations/waiting lists, fines, payments/waivers, notifications, recommendations, reviews, reports, and dashboards are outside the approved Phase 4 scope and remain unimplemented. The centralized loan policy has no administrator settings UI yet.
 
-## Phase 5 — User engagement
+## Phase 5 — NAWA Campus and engagement — In progress
 
+### Phase 5.0 — Safety and product alignment
+
+- [x] Preserve the approved NAWA marketplace homepage, header, visual language, and existing Phase 1–4 technical work.
+- [x] Document NAWA Store, NAWA Campus, NAWA Read, and the Buy — Borrow — Read direction without risky internal package/directory renames.
+- [x] Work on the isolated `phase-5-campus` branch and record the pre-change verification baseline.
+
+### Phase 5.1 — Real university-library inventory
+
+- [x] Add normalized `Library`, `LibraryFloor`, and `LibraryRoom` entities and integrate them with existing sections, shelves, and copies.
+- [x] Preserve home location independently from current copy status and keep opaque source shelf codes exact.
+- [x] Import all 23 authoritative source rows into Floor 3, Room 315 of `مكتبة الكلية`, one physical Campus copy per source row, without replacing the Store catalog.
+- [x] Preserve raw publication information, genuine nulls, and DDC 621 without outside enrichment.
+- [x] Extend safe catalog and location APIs, ADMIN structural management, RBAC, validation, and audit logging.
+- [x] Add the bilingual responsive Campus availability card and accessible location dialog to Book Details without altering the approved homepage/header.
+- [x] Add database-backed Campus/RBAC/privacy/status tests and rendered frontend Book Details tests.
+- [x] Complete final full-suite, Docker/runtime, data, and manual responsive verification before closing Phase 5.1.
+
+### Phase 5.1.5 — NAWA Campus UI integration and marketplace polish
+
+- [x] Preserve the approved two-level Store-first marketplace header, homepage structure, hero illustration, and NAWA visual language.
+- [x] Broaden the hero copy to represent books, learning tools, technology, and knowledge while retaining functional catalog search.
+- [x] Replace public internal Campus inventory terminology and make long category labels readable without breaking the horizontal scroller.
+- [x] Add clear `مكتبة الكلية` / `Campus Library` navigation through existing header patterns without overcrowding the utility row.
+- [x] Add `/campus` using the real library hierarchy, 23 Campus holdings, real source groups, search, availability, pagination, and safe loading/error/empty states.
+- [x] Add a real available-Campus homepage shelf and accurate subtle Campus badges to shared marketplace cards.
+- [x] Preserve the Phase 5.1 Book Details availability/location card and the existing Phase 4 circulation lifecycle.
+- [x] Add database-backed Campus catalog contract coverage and rendered frontend Campus/page/card/navigation coverage.
+- [x] Complete final formatting, full lint/type/test/build, Docker/runtime, API, and 1440/900/390 visual verification.
+
+Phase 5.1.5 is an integration checkpoint before reservations. It creates no reservation, waitlist, pickup-ticket/QR, NAWA Read, offline-reading, or commerce behavior.
+
+### Phase 5.1.6 — NAWA Marketplace Visual Recomposition
+
+- [x] Preserve NAWA branding, real APIs/data, the approved hero illustration, Store-first navigation, Campus hierarchy, and Phase 4 circulation behavior.
+- [x] Refine the two-row header, hero, category rail, product shelves, portrait book cards, `/campus`, and Book Details into a denser mature retail structure.
+- [x] Reuse one resilient NAWA cover component for shelf, catalog, Campus, and Book Details missing/broken-cover states.
+- [x] Keep Campus integrated with real Floor 3 / Room 315 availability and no reservation, pickup, commerce, or Phase 5.2 behavior.
+- [x] Complete focused component checks, full formatting/lint/type/test/build verification, and manual 1440/900/390 Arabic RTL and English LTR visual inspection.
+
+Phase 5.1.6 is the final structural marketplace design pass before reservations. The public UI was intentionally recomposed around mature bookstore hierarchy and retail density while preserving NAWA identity, existing behavior, and authoritative data. Jarir informed only structural UX qualities; no proprietary brand or visual assets were copied.
+
+### Phase 5.1.7 — Final Visual Polish and Acceptance
+
+- [x] Keep the two-level marketplace header while reducing its footprint, preserving the dominant real catalog search, and removing the non-functional Brands control from visible navigation.
+- [x] Remove the duplicate Hero search and replace it with functional Browse Books and Campus Library actions.
+- [x] Preserve six complete product cards at 1440px while improving portrait-cover prominence, metadata direction, two-line title clamping, one-line author treatment, 40px actions, and deterministic NAWA fallback-cover variation.
+- [x] Compact the Campus introduction and show the real Floor 3 / Room 315 location beside a stable unfiltered holdings total supplied by the catalog API.
+- [x] Add focused rendered coverage for Hero actions, hidden Brands navigation, fallback-cover variation, mixed-language direction, Campus location, and stable API-backed Campus totals.
+- [x] Complete full formatting, lint, type-check, test, build, diff, Docker/runtime, and manual 1440/900/390 RTL/LTR acceptance checks.
+
+Phase 5.1.7 is a frontend visual-acceptance pass only. It does not add reservations, payments, checkout, Brands filtering, new backend contracts, or any Phase 5.2 behavior. Jarir remains a structural-density reference only; NAWA copy, assets, brand, and product behavior remain original.
+
+### Phase 5.2 — Reservation Engine — Complete
+
+#### Phase 5.2.1 — Reservation Foundation and Data Model
+
+- [x] Add the historical `Reservation` entity with member, book, and physical-copy relations and `ACTIVE`, `CANCELLED`, `EXPIRED`, and `COLLECTED` lifecycle states.
+- [x] Preserve the existing physical-copy `RESERVED` state and keep Reservation lifecycle state separate from copy state.
+- [x] Add PostgreSQL partial unique indexes for one active reservation per copy and one active reservation per member/book while retaining completed history.
+- [x] Add a SystemSetting-backed 24-hour pickup-window policy with a safe code fallback.
+- [x] Wire an internal Reservations module without exposing incomplete endpoints or frontend controls.
+- [x] Apply `reservation_foundation` to development and isolated test databases and add database-backed foundation coverage.
+- [x] Complete full format, lint, type-check, backend/frontend tests, build, migration, diff, data, and Docker health verification.
+
+Phase 5.2.1 adds data and policy foundations only. Reservation creation/cancellation/expiration transactions, inventory-counter updates, member eligibility, copy locking, pickup/collection, Loan creation, audit events, jobs, notifications, QR tickets/scanning, and all member/staff reservation UI remain deferred to Phase 5.2.2 and later.
+
+#### Phase 5.2.2 — Create Reservation and Concurrency Safety
+
+- [x] Add MEMBER-only `POST /api/v1/reservations`; derive membership identity from the authenticated account and accept only a book ID.
+- [x] Validate the active verified member, active book, and eligible active Campus inventory without exposing copy choice to the member.
+- [x] Select deterministically by copy code and lock with PostgreSQL `FOR UPDATE OF copy SKIP LOCKED` inside the established serializable transaction/retry pattern.
+- [x] Atomically create the ACTIVE reservation, change `AVAILABLE → RESERVED`, synchronize book counters, calculate policy expiration, and write a safe audit event.
+- [x] Translate duplicate, unavailable, and exhausted concurrency races to stable HTTP errors without leaking Prisma/PostgreSQL details.
+- [x] Add database-backed endpoint, eligibility, history, direct-borrow regression, and real competing-request coverage.
+- [x] Complete full Prisma, format, lint, type-check, backend/frontend tests, build, diff, database-data, and Docker/runtime verification.
+
+Phase 5.2.2 creates reservations only. Cancellation, automatic expiration/release, collection, reservation-to-Loan conversion, pickup tickets/QR/scanning, member reservation queries/UI, jobs, and notifications remain deferred.
+
+#### Phase 5.2.3 — Reservation Queries, Cancellation, and Expiration
+
+- [x] Add MEMBER-only paginated/status-filtered `GET /reservations/me` and ownership-protected `GET /reservations/:id` with safe book, copy, location, and cancellation data.
+- [x] Add transactional owner-only cancellation with reservation locking, `ACTIVE → CANCELLED`, `RESERVED → AVAILABLE`, counter synchronization, and one audit event.
+- [x] Add reusable idempotent due-expiration processing with row locking, `ACTIVE → EXPIRED`, copy release, counter synchronization, and one audit event.
+- [x] Run expiration automatically at service startup and at a lightweight configurable interval without adding a queue dependency.
+- [x] Defensively process relevant stale ACTIVE reservations before queries and new reservation conflict/availability decisions.
+- [x] Cover ownership, pagination/filtering, cancellation, terminal/inconsistent states, expiration, re-reservation, and real cancellation/processor races with PostgreSQL-backed tests.
+- [x] Complete full Prisma, format, lint, type-check, backend/frontend tests, build, diff, database-data, and Docker/runtime verification.
+
+Phase 5.2.3 completes CREATE, QUERY, CANCEL, and EXPIRE only. Collection, pickup, reservation-to-Loan conversion, QR/tokens/scanning, member reservation frontend, jobs/notifications, and other later features remain deferred.
+
+#### Phase 5.2.4 — Reservation Engine Final Hardening and Acceptance
+
+- [x] Validate status/pagination input, cap page size at 50, preserve ownership before defensive expiration, and document the safe API error contract.
+- [x] Bound scheduler configuration, prevent overlapping local passes, preserve startup error isolation, and verify Nest shutdown timer cleanup.
+- [x] Keep `RESERVED` under Reservation Engine control by rejecting manual assignment, active-copy mutation/archive, and active-reservation book archive.
+- [x] Verify create/cancel/expire atomicity, in-transaction audit semantics, bounded serialization/deadlock retries, exact partial-index predicates, and counter invariants.
+- [x] Cover malformed queries, foreign stale details, catalog bypasses, failed-row isolation, cancel/create, expiration/create, cancel/expiration, competing workers, and direct-Borrow rejection with real PostgreSQL-backed tests.
+- [x] Complete full Prisma, seed, format, lint, type-check, backend/frontend tests, build, diff, database-integrity, Campus-data, and Docker/runtime verification.
+
+Phase 5.2 is complete for the backend Reservation Engine lifecycle `CREATE`, `QUERY`, `CANCEL`, and `EXPIRE`. `COLLECTED` remains a future state only; no pickup, reservation-to-Loan conversion, QR/scanner, member reservation frontend, or notifications were started.
+
+### Later Phase 5 work — Not started
+
+- [ ] Phase 5.3: implement the separately approved pickup/collection scope; if authorized, it must atomically coordinate `COLLECTED`, copy/Loan state, counters, pickup proof, and replay safety.
 - [ ] Implement verified borrower ratings/reviews.
 - [ ] Implement in-app/email notifications, preferences, BullMQ jobs, and schedules.
 - [ ] Implement book acquisition requests and damaged/missing/information/location reports.
 - [ ] Implement FastAPI TF-IDF/cosine recommendations using catalog and user activity; backend integration and fallback popular results.
+
+Phase 5 as a whole is **not complete**. Phase 5.1 does not implement reservation/waitlist flows, pickup verification, Store checkout/payments, or NAWA Read.
 
 ## Phase 6 — Dashboards
 

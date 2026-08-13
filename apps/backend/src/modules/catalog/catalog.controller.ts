@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { CurrentUser, Public, Roles } from '../../common/auth.decorators';
 import { JwtAuthGuard, OptionalJwtAuthGuard, RolesGuard } from '../../common/auth.guards';
@@ -17,6 +17,11 @@ export class CatalogController {
   constructor(private readonly catalog: CatalogService) {}
   @Public()
   @UseGuards(OptionalJwtAuthGuard)
+  @ApiOperation({ summary: 'Browse the catalog, including safe NAWA Campus discovery' })
+  @ApiQuery({ name: 'q', required: false, description: 'Book title, ISBN, or author search.' })
+  @ApiQuery({ name: 'available', required: false, type: Boolean })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({
     name: 'archiveState',
     required: false,
@@ -29,6 +34,18 @@ export class CatalogController {
     type: Boolean,
     description: 'Equivalent to archiveState=all for authorized managers.',
   })
+  @ApiQuery({
+    name: 'campus',
+    required: false,
+    type: Boolean,
+    description: 'Return only books with active physical NAWA Campus copies.',
+  })
+  @ApiQuery({
+    name: 'sourceCollection',
+    required: false,
+    type: String,
+    description: 'Filter Campus books by an exact supplied source collection.',
+  })
   @Get('books')
   books(
     @Query()
@@ -37,6 +54,8 @@ export class CatalogController {
       categoryId?: string;
       language?: string;
       available?: string;
+      campus?: string;
+      sourceCollection?: string;
       sort?: string;
       page?: string;
       limit?: string;
@@ -58,15 +77,31 @@ export class CatalogController {
   @Public() @Get('books/:id') byId(@Param('id') id: string) {
     return this.catalog.book(id);
   }
-  @Public() @Get('books/:id/availability') async availability(@Param('id') id: string) {
+  @Public()
+  @ApiOperation({ summary: 'Get current catalog and safe NAWA Campus availability' })
+  @Get('books/:id/availability')
+  async availability(@Param('id') id: string) {
     const book = await this.catalog.book(id);
     return book
       ? {
           totalCopies: book.totalCopies,
           availableCopies: book.availableCopies,
+          campusAvailability: book.campusAvailability,
           locations: book.copies
             .filter((copy) => copy.status === 'AVAILABLE')
-            .map((copy) => `${copy.section.floor} → ${copy.section.nameEn} → ${copy.shelf.code}`),
+            .map(
+              (copy) =>
+                copy.campusLocation ?? {
+                  section: {
+                    id: copy.section.id,
+                    nameEn: copy.section.nameEn,
+                    nameAr: copy.section.nameAr,
+                  },
+                  floor: copy.section.floor,
+                  room: copy.section.room,
+                  shelf: copy.shelf.code,
+                },
+            ),
         }
       : null;
   }

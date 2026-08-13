@@ -1,4 +1,36 @@
-# Smart Library API
+# NAWA Unified Knowledge Platform API
+
+## Phase 5.1 Campus locations and availability
+
+`GET /api/v1/libraries` returns safe summaries of active Campus libraries. `GET /api/v1/libraries/:id` returns the active library → floor → room hierarchy. These reads are public so Book Details can explain where a physical Campus copy lives. They omit timestamps, audit data, copy identifiers, and other administrative fields.
+
+Library structure changes are ADMIN-only:
+
+- `POST /api/v1/libraries` and `PATCH /api/v1/libraries/:id`
+- `POST /api/v1/libraries/:libraryId/floors` and `PATCH /api/v1/library-floors/:id`
+- `POST /api/v1/library-floors/:floorId/rooms` and `PATCH /api/v1/library-rooms/:id`
+
+Each write validates its active parent, reports uniqueness conflicts safely, and writes an audit record. Librarians retain book/copy management but cannot alter the structural library hierarchy.
+
+Public `GET /api/v1/books/:slug` now includes `campusAvailability`. It contains aggregate `totalCopies`, `availableCopies`, `availabilityStatus`, and safe physical-copy presentation data: status, condition, library, floor, room, exact `shelfLocationCode`, and optional source collection. It intentionally omits internal source references, copy/barcode/QR codes, notes, acquisition metadata, and authentication/audit data. A Store-only title returns `NOT_HELD` with an empty Campus copy list.
+
+`GET /api/v1/books/:id/availability` uses the same safe Campus mapping so detail and availability clients do not drift. Copy management accepts `homeLibraryRoomId`, exact `shelfLocationCode`, `sourceInventoryReference`, and `sourceCollection`; it validates that a selected shelf/section and home room are consistent. Status changes never erase the home location.
+
+### Phase 5.1.5 Campus discovery query
+
+The established public catalog endpoint also powers the marketplace-style Campus page; no duplicate catalog API was introduced:
+
+```http
+GET /api/v1/books?campus=true&q=java&available=true&sourceCollection=AI%20%2F%20General%20Programming%20%2F%20ML-DL%20%2F%20Processing&page=1&limit=8
+```
+
+- `campus=true` returns only active books with at least one active copy assigned to an active Campus room.
+- `available=true` applies to the Campus copies when `campus=true`, rather than to unrelated Store/library copies.
+- `q`, `page`, and `limit` retain the normal catalog search and pagination contract.
+- `sourceCollection` is an exact optional filter over the three supplied source groups. The response provides a safe `sourceCollections` list for public filter controls.
+- Every list item includes only the aggregate `campusAvailability` presentation fields: `hasPhysicalCopies`, `totalCopies`, `availableCopies`, and `availabilityStatus`. Raw Campus copies, source inventory references, barcodes, QR values, and management metadata are omitted.
+
+Ordinary `GET /api/v1/books` behavior is unchanged. It now carries the same safe aggregate Campus availability on each returned book so marketplace cards can show an accurate, subtle Campus badge without a second request.
 
 ## Phase 4 Part 1 loans
 
@@ -11,6 +43,22 @@ Unavailable-copy races and repeated returns return `409 Conflict`. Ineligible ac
 Swagger is available at `/api/docs`. Phase 2 provides authentication under `/api/v1/auth` and protected user administration under `/api/v1/users`. Access tokens use Bearer authentication; refresh tokens use the HTTP-only cookie `COOKIE_NAME`.
 
 For the staff circulation UI, `GET /api/v1/users/members?q=` is available to LIBRARIAN and ADMIN. It returns a minimal member eligibility summary (verification/status, active and overdue counts, remaining capacity), never authentication secrets.
+
+## Phase 5.2 Campus Reservation Engine
+
+`POST /api/v1/reservations` allows an authenticated active, verified MEMBER to reserve one eligible physical Campus copy for themselves. The request is `{ "bookId": "<uuid>" }`; member identity comes only from the bearer token, and physical-copy selection stays server-side. LIBRARIAN and ADMIN receive `403` from this self-service route.
+
+The server selects deterministically by copy code from active `AVAILABLE` Campus inventory and performs member/book validation, row locking, ACTIVE Reservation creation, `AVAILABLE → RESERVED`, book-counter synchronization, policy-based expiration, and a `RESERVATION_CREATED` audit entry in one serializable transaction. PostgreSQL partial unique indexes and bounded serialization retries protect competing requests. Duplicate reservations and unavailable/raced inventory return `409`; missing active books return `404`; authentication and role failures return `401`/`403`.
+
+The response contains safe reservation and book data, the assigned copy summary, Campus pickup location, and committed availability counters. It does not contain member authentication/private fields, barcode/QR values, pickup tokens, or internal source/acquisition data. Collection, reservation-to-Loan conversion, member reservation UI, pickup QR, and scanning are not implemented in Phase 5.2.
+
+### Reservation queries, cancellation, and expiration
+
+`GET /api/v1/reservations/me` is MEMBER-only and derives ownership from JWT. It returns deterministic newest-first pagination (`page`, `limit`, maximum 50) and accepts `status=active|cancelled|expired|collected|all`; malformed status, non-integer, non-positive, and oversized pagination values return `400`. `GET /api/v1/reservations/:id` validates UUID format and permits only the owning member. Both return safe book/copy/location data and `canCancel`, never member authentication data, QR/pickup tokens, barcodes, or acquisition/source metadata.
+
+`POST /api/v1/reservations/:id/cancel` locks an owned reservation and atomically changes `ACTIVE → CANCELLED`, releases `RESERVED → AVAILABLE`, synchronizes inventory, and writes one `RESERVATION_CANCELLED` audit event. Missing, foreign, terminal, already-expired, and inconsistent records use the normal `404`/`403`/`409` errors.
+
+Due reservations are processed at backend startup and every 60 seconds by default. `RESERVATION_EXPIRATION_INTERVAL_MS` accepts an integer from 5000 through 2147483647; invalid values fall back to 60000, passes do not overlap within one process, and shutdown clears the timer. Each due row is locked and atomically changed `ACTIVE → EXPIRED` with copy release, counter synchronization, and one system-actor `RESERVATION_EXPIRED` audit. Processing is idempotent and safe across competing workers, and one failed row does not block unrelated candidates. Queries and new creation also defensively process relevant stale rows using the same transition logic. Collection, pickup/QR/scanning, Loan conversion, frontend reservation controls/pages, and notifications remain unimplemented.
 
 ## Phase 3 catalog
 

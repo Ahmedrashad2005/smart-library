@@ -4,9 +4,12 @@ import { CatalogController } from './catalog.controller';
 import { CatalogService } from './catalog.service';
 import { MasterDataController } from './master-data.controller';
 import { MasterDataService } from './master-data.service';
+import { CampusLocationController } from './campus-location.controller';
+import { CampusLocationService } from './campus-location.service';
 @Module({
   imports: [AuditLogModule],
-  controllers: [CatalogController, MasterDataController],
-  providers: [CatalogService, MasterDataService],
+  controllers: [CatalogController, MasterDataController, CampusLocationController],
+  providers: [CatalogService, MasterDataService, CampusLocationService],
+  exports: [CatalogService],
 })
 export class CatalogModule {}

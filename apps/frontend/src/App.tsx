@@ -4,6 +4,8 @@ import type { Role } from './auth/access';
 import { apiRequest, requestMessage } from './lib/api';
 import { PublicCatalog } from './catalog/PublicCatalog';
 import { PublicHeader } from './catalog/PublicHeader';
+import { BookDetail } from './catalog/BookDetail';
+import { CampusPage } from './catalog/CampusPage';
 import { canAccessLoanRoute, isMemberLoanRoute, isStaffLoanRoute } from './loans/access';
 import { LoanRoute } from './loans/pages';
 import {
@@ -96,10 +98,6 @@ function navigate(to: string, setPath: (path: string) => void): void {
   setPath(pathNow());
   window.dispatchEvent(new Event('nawa:navigation'));
 }
-function bookTitle(book: Book): string {
-  return document.documentElement.dir === 'rtl' ? book.titleAr || book.title : book.title;
-}
-
 function App(): JSX.Element {
   const [path, setPath] = useState(pathNow());
   const [session, setSession] = useState<Session>(null);
@@ -151,7 +149,8 @@ function App(): JSX.Element {
     page = <CopiesManager path={path} token={session!.token} go={go} notify={setNotice} />;
   else if (area) page = <MasterManager area={area} token={session!.token} notify={setNotice} />;
   else if (path.startsWith('/books/'))
-    page = <BookDetail slug={path.split('/').at(-1) || ''} go={go} />;
+    page = <BookDetail slug={path.split('/').at(-1) || ''} locale={arabic ? 'ar' : 'en'} go={go} />;
+  else if (path === '/campus') page = <CampusPage locale={arabic ? 'ar' : 'en'} go={go} />;
   else
     page = <PublicCatalog locale={arabic ? 'ar' : 'en'} go={go} showFullCatalog={path !== '/'} />;
   return (
@@ -244,51 +243,6 @@ function LoginGate({
             {saving ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
-      </div>
-    </section>
-  );
-}
-
-function BookDetail({ slug, go }: { slug: string; go: (to: string) => void }): JSX.Element {
-  const [book, setBook] = useState<Book | null>(null);
-  const [error, setError] = useState('');
-  useEffect(() => {
-    void apiRequest<Book>(`/books/slug/${encodeURIComponent(slug)}`)
-      .then(setBook)
-      .catch((reason: unknown) => setError(requestMessage(reason)));
-  }, [slug]);
-  if (error)
-    return (
-      <section className="page">
-        <ErrorState message={error} retry={() => go('/books')} />
-      </section>
-    );
-  if (!book)
-    return (
-      <section className="page">
-        <Loading />
-      </section>
-    );
-  return (
-    <section className="page detail">
-      <button className="text-button" onClick={() => go('/books')}>
-        ← Back to catalog
-      </button>
-      <div className="detail-grid">
-        <div className="cover large">{bookTitle(book).slice(0, 1)}</div>
-        <div>
-          <p className="eyebrow">{book.category?.nameEn}</p>
-          <h1>{bookTitle(book)}</h1>
-          <p>{book.description || 'No description has been added yet.'}</p>
-          <dl>
-            <div>
-              <dt>Availability</dt>
-              <dd>
-                {book.availableCopies} of {book.totalCopies} copies available
-              </dd>
-            </div>
-          </dl>
-        </div>
       </div>
     </section>
   );

@@ -22,7 +22,8 @@ async function bootstrap(): Promise<void> {
     SwaggerModule.createDocument(
       app,
       new DocumentBuilder()
-        .setTitle('Smart Library API')
+        .setTitle('NAWA Unified Knowledge Platform API')
+        .setDescription('APIs for NAWA Store-facing catalog, NAWA Campus, and shared services.')
         .setVersion('1.0')
         .addBearerAuth()
         .addCookieAuth(process.env.COOKIE_NAME ?? 'smart_library_refresh')

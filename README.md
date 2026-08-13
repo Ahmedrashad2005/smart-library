@@ -1,6 +1,20 @@
-# Smart Library
+# NAWA — Unified Knowledge Platform
 
-Phase 4 circulation is complete and includes role-protected staff borrowing/return pages (`/librarian/loans`) and member loan pages (`/my-loans`). Manual copy-code, barcode, and QR entry work everywhere; browser camera scanning is used only after an explicit scan action and falls back safely when unsupported. Borrowing, renewal, and returns are transaction-safe and keep copy availability counters synchronized.
+NAWA has evolved from the original Smart Library Management System into one knowledge platform built around **Buy — Borrow — Read**:
+
+- **NAWA Store** is the marketplace-facing catalog for books, educational products, stationery, technology, and learning tools. Commerce checkout is planned, not part of the current backend.
+- **NAWA Campus** uses the proven physical-library, inventory, circulation, RBAC, and audit foundation. It now exposes real university-library holdings and their exact home locations.
+- **NAWA Read** is the future digital reading experience. It is documented as product direction only and is not implemented.
+
+The approved light, Arabic-first marketplace homepage remains the public visual direction. Internal workspace/package names retain their historical Smart Library naming to avoid a risky branding-only rename.
+
+Phase 4 circulation remains complete and includes role-protected staff borrowing/return pages (`/librarian/loans`) and member loan pages (`/my-loans`). Manual copy-code, barcode, and QR entry work everywhere; browser camera scanning is used only after an explicit scan action and falls back safely when unsupported. Borrowing, renewal, and returns are transaction-safe and keep copy availability counters synchronized.
+
+Phase 5.1 adds the real College Library Campus holding: Floor 3, Room 315, with all 23 supplied source rows mapped to one physical copy each. See [NAWA Campus](docs/nawa-campus.md) for the data and API contract. Reservation, pickup-ticket/QR, checkout, and digital reading are deliberately outside Phase 5.1.
+
+Phase 5.1.5 integrates that real Campus holding into the approved Store-first marketplace. The public `/campus` page, header entry, homepage `من مكتبة كليتك` shelf, and Campus badges use the established catalog and safe aggregate availability APIs. No Campus books or locations are hardcoded in the UI, and no reservation behavior is present.
+
+Verified Phase 5.1.5 coverage is 5 backend suites / 38 tests and 21 frontend files / 122 tests. Formatting, lint, type checks, tests, builds, the six-service Docker stack, live Campus API queries, and responsive browser checks pass. Phase 5.2 has not started.
 
 ## Applications
 
@@ -47,9 +61,11 @@ npm run prisma:seed --workspace=@smart-library/backend
 
 The seed uses `SmartLib123` for `admin@smart-library.test`, two librarian accounts, and 15 member accounts. These credentials are development-only.
 
-The verified Phase 4 seed includes 50 bilingual books, 130 physical copies, and four deterministic loans. The isolated test database is `smart_library_test`. Current automated coverage is 4 backend suites / 25 tests and 14 frontend files / 78 tests.
+The established Store-facing seed includes 50 bilingual books, 130 physical copies, and four deterministic loans. The Campus import adds 23 authoritative source rows and one physical Campus copy per row without replacing the wider catalog. The isolated test database is `smart_library_test`.
 
-## Phase 1 checks
+Verified Phase 5.1 coverage is 5 backend suites / 37 tests and 19 frontend files / 111 tests. Phase 5.0 and Phase 5.1 are complete; Phase 5 as a whole remains in progress.
+
+## Project checks
 
 ```bash
 npm run format

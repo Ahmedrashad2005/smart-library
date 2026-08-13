@@ -9,7 +9,9 @@ type Props = {
   locale: PublicLocale;
   go: (to: string) => void;
   loadingLabel: string;
-  tone: 'new' | 'popular' | 'available';
+  tone: 'new' | 'popular' | 'available' | 'campus';
+  description?: string;
+  actionPath?: string;
 };
 
 export function BookShelfSection({
@@ -20,6 +22,8 @@ export function BookShelfSection({
   go,
   loadingLabel,
   tone,
+  description,
+  actionPath = '/books',
 }: Props): JSX.Element | null {
   if (books?.length === 0) return null;
   const viewAll = locale === 'ar' ? 'عرض الكل' : 'View all';
@@ -30,26 +34,31 @@ export function BookShelfSection({
       aria-labelledby={`${id}-heading`}
     >
       <div className="book-shelf-heading">
-        <h2 id={`${id}-heading`}>
-          {tone === 'popular' && <PublicIcon name="sparkles" />}
-          {title}
-        </h2>
-        <button onClick={() => go('/books')}>{viewAll}</button>
+        <div>
+          <h2 id={`${id}-heading`}>
+            {tone === 'popular' && <PublicIcon name="sparkles" />}
+            {tone === 'campus' && <PublicIcon name="book" />}
+            {title}
+          </h2>
+          {description && <p>{description}</p>}
+        </div>
+        <button onClick={() => go(actionPath)}>{viewAll}</button>
       </div>
       {books === null ? (
         <div className="shelf-loading" role="status" aria-label={loadingLabel}>
-          {Array.from({ length: 5 }, (_, index) => (
+          {Array.from({ length: 6 }, (_, index) => (
             <span key={index} aria-hidden="true" />
           ))}
         </div>
       ) : (
         <div className="book-shelf-row">
-          {books.slice(0, 5).map((book) => (
+          {books.slice(0, 6).map((book) => (
             <BookShelfCard
               book={book}
               locale={locale}
               go={go}
               isNew={tone === 'new'}
+              campusScope={tone === 'campus'}
               key={book.id}
             />
           ))}
