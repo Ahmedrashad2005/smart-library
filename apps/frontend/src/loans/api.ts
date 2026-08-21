@@ -1,6 +1,7 @@
 import { apiRequest } from '../lib/api';
 
 export type LoanStatus = 'ACTIVE' | 'OVERDUE' | 'RETURNED';
+export type RenewalReason = 'OVERDUE' | 'RETURNED' | 'LIMIT_REACHED' | 'MEMBER_INELIGIBLE';
 export type CopyCondition = 'NEW' | 'GOOD' | 'FAIR' | 'POOR' | 'DAMAGED';
 export type Loan = {
   id: string;
@@ -12,6 +13,13 @@ export type Loan = {
   lastRenewedAt?: string | null;
   returnCondition?: CopyCondition | null;
   returnNotes?: string | null;
+  renewalEligibility?: {
+    canRenew: boolean;
+    reason: RenewalReason | null;
+    used: number;
+    maximum: number;
+    remaining: number;
+  };
   member: { id: string; fullName: string; email: string; membershipNumber?: string };
   bookCopy: {
     id: string;
@@ -28,8 +36,8 @@ export type Loan = {
       coverImageUrl?: string | null;
       authors: Array<{ id: string; name: string; arabicName?: string | null }>;
     };
-    section?: { code: string; nameEn: string } | null;
-    shelf?: { code: string; nameEn: string } | null;
+    section?: { code: string; nameEn: string; nameAr?: string | null } | null;
+    shelf?: { code: string; nameEn: string; nameAr?: string | null } | null;
   };
   issuedBy?: { id: string; fullName: string } | null;
   returnedBy?: { id: string; fullName: string } | null;

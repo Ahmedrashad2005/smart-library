@@ -36,6 +36,13 @@ const loan = (status: Loan['status'] = 'ACTIVE'): Loan => ({
   borrowedAt: '2026-07-01T00:00:00Z',
   dueAt: '2026-08-10T00:00:00Z',
   renewedCount: status === 'ACTIVE' ? 0 : 2,
+  renewalEligibility: {
+    canRenew: status === 'ACTIVE',
+    reason: status === 'ACTIVE' ? null : status === 'OVERDUE' ? 'OVERDUE' : 'RETURNED',
+    used: status === 'ACTIVE' ? 0 : 2,
+    maximum: 2,
+    remaining: status === 'ACTIVE' ? 2 : 0,
+  },
   member: { id: 'member-rtl', fullName: 'قارئ المكتبة', email: 'reader@test.local' },
   bookCopy: {
     id: 'copy-rtl',
@@ -218,11 +225,15 @@ describe('loan RTL and accessibility behavior', () => {
     vi.mocked(listMyLoans).mockResolvedValue(result([loan()]));
     render(<LoanList {...pageProps} staff={false} mine path="/my-loans" token="member-token" />);
 
-    expect(await screen.findByText('المؤلف العربي, المؤلف الثاني')).toBeInTheDocument();
-    expect(screen.getByText('الكتاب العربي')).toBeInTheDocument();
-    expect(screen.getByLabelText('Loan status')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Previous' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled();
+    expect(
+      await screen.findByText('المؤلف العربي، المؤلف الثاني', {
+        selector: '.member-loan-authors',
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'الكتاب العربي', level: 2 })).toBeInTheDocument();
+    expect(screen.getByRole('toolbar', { name: 'تصفية الإعارات' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'السابق' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'التالي' })).toBeEnabled();
   });
 
   it('renders RTL member details and exposes the renewal denial as status text', async () => {
@@ -239,8 +250,12 @@ describe('loan RTL and accessibility behavior', () => {
     );
 
     expect(await screen.findByRole('heading', { name: 'الكتاب العربي' })).toBeInTheDocument();
-    expect(screen.getByText('المؤلف العربي, المؤلف الثاني')).toBeInTheDocument();
-    expect(screen.getByRole('status')).toHaveTextContent('Renewal unavailable: loan is overdue');
-    expect(screen.queryByRole('button', { name: 'Renew loan' })).not.toBeInTheDocument();
+    expect(
+      screen.getByText('المؤلف العربي، المؤلف الثاني', {
+        selector: '.member-loan-detail__heading > div > span',
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('لا يمكن التجديد لأن الإعارة متأخرة');
+    expect(screen.queryByRole('button', { name: 'تجديد الإعارة' })).not.toBeInTheDocument();
   });
 });

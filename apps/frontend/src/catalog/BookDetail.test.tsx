@@ -62,7 +62,7 @@ function campusBook(overrides: Partial<BookDetailRecord> = {}): BookDetailRecord
   };
 }
 
-describe('NAWA Campus Book Details', () => {
+describe('Delta University Library Book Details', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     document.documentElement.dir = 'rtl';
@@ -79,7 +79,7 @@ describe('NAWA Campus Book Details', () => {
     expect(heading).toBeVisible();
     expect(
       screen.getByRole('img', { name: 'لا توجد صورة غلاف: Operating System Concepts' }),
-    ).toHaveTextContent('نَوَى');
+    ).toHaveTextContent('DELTA');
     expect(
       within(heading.closest('.book-detail-content') as HTMLElement).getAllByText(
         'SILBERSCHATZ, ABRAHAM',
@@ -98,7 +98,7 @@ describe('NAWA Campus Book Details', () => {
     const trigger = await screen.findByRole('button', { name: 'عرض المكان' });
     await user.click(trigger);
     const dialog = screen.getByRole('dialog', { name: 'تفاصيل مكان الكتاب' });
-    expect(within(dialog).getByText('مكتبة الكلية')).toBeVisible();
+    expect(within(dialog).getByText('المكتبة الجامعية')).toBeVisible();
     expect(within(dialog).getByText('الدور الثالث')).toBeVisible();
     expect(within(dialog).getByText('غرفة 315')).toBeVisible();
     expect(within(dialog).getByText('AI / General Programming / ML-DL / Processing')).toBeVisible();
@@ -168,7 +168,9 @@ describe('NAWA Campus Book Details', () => {
       }),
     );
     render(<BookDetail slug="store-only" locale="ar" go={go} />);
-    expect(await screen.findByText('هذا الكتاب غير متوفر حاليًا في مكتبة الكلية.')).toBeVisible();
+    expect(
+      await screen.findByText('هذا الكتاب غير متوفر حاليًا في المكتبة الجامعية.'),
+    ).toBeVisible();
     expect(screen.queryByRole('button', { name: 'عرض المكان' })).not.toBeInTheDocument();
   });
 });

@@ -33,13 +33,13 @@ type Props = {
 
 const copy = {
   ar: {
-    campus: 'مكتبة الكلية',
+    campus: 'المكتبة الجامعية',
     available: 'متاح للاستعارة',
     unavailable: 'غير متاح حاليًا',
     borrowed: 'مُعار حاليًا',
     maintenance: 'قيد الصيانة',
     damaged: 'غير متاح — نسخة تالفة',
-    notHeld: 'هذا الكتاب غير متوفر حاليًا في مكتبة الكلية.',
+    notHeld: 'هذا الكتاب غير متوفر حاليًا في المكتبة الجامعية.',
     copies: 'النسخ المتاحة',
     location: 'الموقع',
     shelf: 'رقم الكتاب على الرف',
@@ -49,13 +49,13 @@ const copy = {
     close: 'إغلاق',
   },
   en: {
-    campus: 'College Library',
+    campus: 'University Library',
     available: 'Available to borrow',
     unavailable: 'Currently unavailable',
     borrowed: 'Currently on loan',
     maintenance: 'Under maintenance',
     damaged: 'Unavailable — damaged copy',
-    notHeld: 'This book is not currently held by the College Library.',
+    notHeld: 'This book is not currently held by the University Library.',
     copies: 'Available copies',
     location: 'Location',
     shelf: 'Book number on the shelf',
@@ -114,7 +114,9 @@ export function CampusAvailabilityCard({ availability, locale }: Props): JSX.Ele
           <PublicIcon name="book" />
         </div>
         <div>
-          <p className="campus-availability__eyebrow">NAWA Campus</p>
+          <p className="campus-availability__eyebrow">
+            {locale === 'ar' ? 'مكتبة جامعة الدلتا' : 'Delta University Library'}
+          </p>
           <h2 id="campus-heading">{labels.campus}</h2>
           <p>{labels.notHeld}</p>
         </div>
@@ -130,10 +132,10 @@ export function CampusAvailabilityCard({ availability, locale }: Props): JSX.Ele
             <PublicIcon name="book" />
           </div>
           <div>
-            <p className="campus-availability__eyebrow">NAWA Campus</p>
-            <h2 id="campus-heading">
-              {localized(location.library.nameEn, location.library.nameAr)}
-            </h2>
+            <p className="campus-availability__eyebrow">
+              {locale === 'ar' ? 'مكتبة جامعة الدلتا' : 'Delta University Library'}
+            </p>
+            <h2 id="campus-heading">{labels.campus}</h2>
           </div>
           <span className={`campus-status ${isAvailable ? 'is-available' : 'is-unavailable'}`}>
             <span aria-hidden="true">{isAvailable ? '✓' : '!'}</span>
@@ -184,7 +186,9 @@ export function CampusAvailabilityCard({ availability, locale }: Props): JSX.Ele
           >
             <div className="campus-location-dialog__heading">
               <div>
-                <p className="campus-availability__eyebrow">NAWA Campus</p>
+                <p className="campus-availability__eyebrow">
+                  {locale === 'ar' ? 'مكتبة جامعة الدلتا' : 'Delta University Library'}
+                </p>
                 <h2 id="campus-location-title">{labels.details}</h2>
               </div>
               <button ref={closeRef} type="button" className="campus-dialog-close" onClick={close}>
@@ -195,7 +199,7 @@ export function CampusAvailabilityCard({ availability, locale }: Props): JSX.Ele
             <ol className="campus-location-path" aria-label={labels.details}>
               <li>
                 <PublicIcon name="book" />
-                <span>{localized(location.library.nameEn, location.library.nameAr)}</span>
+                <span>{labels.campus}</span>
               </li>
               <li>
                 <span className="campus-location-path__number">{location.floor.number}</span>

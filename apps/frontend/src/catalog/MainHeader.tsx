@@ -2,11 +2,10 @@ import { useState } from 'react';
 import type { FormEvent, KeyboardEvent } from 'react';
 import { apiRequest, requestMessage } from '../lib/api';
 import {
-  DeliveryLocationButton,
+  DeltaUniversityBrand,
   HeaderActionButton,
   HeaderDropdownPill,
   HeaderSearch,
-  NawaBrandLogo,
 } from './HeaderControls';
 import { PublicIcon } from './PublicIcon';
 import {
@@ -26,31 +25,33 @@ type Props = {
 const copy = {
   ar: {
     home: 'الرئيسية',
-    books: 'الكتب',
-    categories: 'تصفح الأقسام',
+    books: 'فهرس الكتب',
+    faculties: 'الكليات',
+    categories: 'التخصصات والموضوعات',
     allCategories: 'كل الأقسام',
-    menu: 'فتح قائمة نَوَى',
-    closeMenu: 'إغلاق قائمة نَوَى',
+    menu: 'فتح قائمة مكتبة جامعة الدلتا',
+    closeMenu: 'إغلاق قائمة مكتبة جامعة الدلتا',
     navigation: 'التنقل الرئيسي',
     workspace: 'مساحة العمل',
     myLoans: 'إعاراتي',
     myReservations: 'حجوزاتي',
-    campus: 'مكتبة الكلية',
+    campus: 'المكتبة الجامعية',
     loadingCategories: 'جارٍ تحميل الأقسام…',
     categoriesError: 'تعذر تحميل الأقسام.',
   },
   en: {
     home: 'Home',
-    books: 'Books',
-    categories: 'Browse categories',
+    books: 'Book catalog',
+    faculties: 'Faculties',
+    categories: 'Subjects & categories',
     allCategories: 'All categories',
-    menu: 'Open NAWA menu',
-    closeMenu: 'Close NAWA menu',
+    menu: 'Open Delta University Library menu',
+    closeMenu: 'Close Delta University Library menu',
     navigation: 'Main navigation',
     workspace: 'Workspace',
     myLoans: 'My loans',
     myReservations: 'My Reservations',
-    campus: 'Campus Library',
+    campus: 'University Library',
     loadingCategories: 'Loading categories…',
     categoriesError: 'Categories could not be loaded.',
   },
@@ -59,8 +60,6 @@ const copy = {
 export function MainHeader({ locale, currentPath, session, go }: Props): JSX.Element {
   const [menuOpen, setMenuOpen] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
-  const [locationOpen, setLocationOpen] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState('');
   const [categories, setCategories] = useState<PublicCategory[] | null>(null);
   const [categoryLoading, setCategoryLoading] = useState(false);
   const [categoryError, setCategoryError] = useState('');
@@ -70,7 +69,6 @@ export function MainHeader({ locale, currentPath, session, go }: Props): JSX.Ele
   const closeMenus = () => {
     setMenuOpen(false);
     setCategoryOpen(false);
-    setLocationOpen(false);
   };
   const navigate = (to: string) => {
     closeMenus();
@@ -91,7 +89,6 @@ export function MainHeader({ locale, currentPath, session, go }: Props): JSX.Ele
   const toggleCategories = () => {
     const opening = !categoryOpen;
     setCategoryOpen(opening);
-    setLocationOpen(false);
     setMenuOpen(false);
     if (!opening || categories !== null || categoryLoading) return;
     setCategoryLoading(true);
@@ -112,7 +109,7 @@ export function MainHeader({ locale, currentPath, session, go }: Props): JSX.Ele
   return (
     <div className="main-header" onKeyDown={handleKeyDown}>
       <div className="main-header__inner">
-        <NawaBrandLogo locale={locale} onHome={() => navigate('/')} />
+        <DeltaUniversityBrand locale={locale} onHome={() => navigate('/')} />
 
         <button
           className="public-menu-button"
@@ -123,28 +120,34 @@ export function MainHeader({ locale, currentPath, session, go }: Props): JSX.Ele
           onClick={() => {
             setMenuOpen((open) => !open);
             setCategoryOpen(false);
-            setLocationOpen(false);
           }}
         >
           <PublicIcon name="menu" />
         </button>
 
-        <DeliveryLocationButton
-          locale={locale}
-          selectedLocation={selectedLocation}
-          open={locationOpen}
-          onToggle={() => {
-            setLocationOpen((open) => !open);
-            setCategoryOpen(false);
-            setMenuOpen(false);
-          }}
-          onSelect={(location) => {
-            setSelectedLocation(location);
-            setLocationOpen(false);
-          }}
-        />
+        <button
+          type="button"
+          className="header-campus-pill"
+          aria-current={current('/campus')}
+          onClick={() => navigate('/campus')}
+        >
+          <PublicIcon name="location" />
+          <span>{labels.campus}</span>
+          <PublicIcon name="chevron" />
+        </button>
 
         <HeaderSearch locale={locale} value={search} onChange={setSearch} onSubmit={submitSearch} />
+
+        <nav className="delta-primary-nav" aria-label={labels.navigation}>
+          <button aria-current={current('/books')} onClick={() => navigate('/books')}>
+            <PublicIcon name="book" />
+            {labels.books}
+          </button>
+          <button aria-current={current('/faculties')} onClick={() => navigate('/faculties')}>
+            <PublicIcon name="categories" />
+            {labels.faculties}
+          </button>
+        </nav>
 
         <div className="header-dropdown--categories">
           <HeaderDropdownPill
@@ -204,6 +207,10 @@ export function MainHeader({ locale, currentPath, session, go }: Props): JSX.Ele
           <button aria-current={current('/books')} onClick={() => navigate('/books')}>
             <PublicIcon name="book" />
             {labels.books}
+          </button>
+          <button aria-current={current('/faculties')} onClick={() => navigate('/faculties')}>
+            <PublicIcon name="categories" />
+            {labels.faculties}
           </button>
           <button aria-current={current('/campus')} onClick={() => navigate('/campus')}>
             <PublicIcon name="book" />

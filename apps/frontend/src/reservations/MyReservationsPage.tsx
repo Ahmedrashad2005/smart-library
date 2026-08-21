@@ -3,6 +3,7 @@ import type { KeyboardEvent, ReactNode } from 'react';
 import { BookCoverMedia } from '../catalog/BookCoverMedia';
 import type { PublicLocale } from '../catalog/public.types';
 import { ApiError } from '../lib/api';
+import { MemberAreaNav } from '../member/MemberAreaNav';
 import {
   cancelReservation,
   listMyReservations,
@@ -27,7 +28,7 @@ const noReservations: ReservationResult[] = [];
 const copy = {
   ar: {
     title: 'حجوزاتي',
-    intro: 'تابع الكتب التي حجزتها من مكتبة الكلية ومواعيد استلامها.',
+    intro: 'تابع الكتب التي حجزتها من المكتبة الجامعية ومواعيد استلامها.',
     filters: 'تصفية الحجوزات',
     active: 'النشطة',
     cancelled: 'الملغاة',
@@ -42,10 +43,10 @@ const copy = {
     missing: 'الحجز غير موجود.',
     retry: 'إعادة المحاولة',
     activeEmpty: 'لا توجد حجوزات نشطة',
-    activeEmptyBody: 'يمكنك حجز الكتب المتاحة من مكتبة الكلية.',
+    activeEmptyBody: 'يمكنك حجز الكتب المتاحة من المكتبة الجامعية.',
     historyEmpty: 'لم تقم بأي حجز بعد.',
     filterEmpty: 'لا توجد حجوزات بهذه الحالة.',
-    browse: 'تصفح مكتبة الكلية',
+    browse: 'تصفح المكتبة الجامعية',
     details: 'عرض التفاصيل',
     bookDetails: 'عرض الكتاب',
     back: 'العودة إلى حجوزاتي',
@@ -55,7 +56,7 @@ const copy = {
     collectedAt: 'تاريخ الاستلام',
     pickup: 'مكان الاستلام',
     copyCode: 'رمز النسخة',
-    campus: 'مكتبة الكلية · NAWA Campus',
+    campus: 'مكتبة جامعة الدلتا · المكتبة الجامعية',
     previous: 'السابق',
     next: 'التالي',
     page: 'صفحة',
@@ -81,7 +82,7 @@ const copy = {
   },
   en: {
     title: 'My Reservations',
-    intro: 'Follow the books you reserved from the College Library and their pickup deadlines.',
+    intro: 'Follow the books you reserved from the University Library and their pickup deadlines.',
     filters: 'Filter reservations',
     active: 'Active',
     cancelled: 'Cancelled',
@@ -96,10 +97,10 @@ const copy = {
     missing: 'Reservation not found.',
     retry: 'Try again',
     activeEmpty: 'No active reservations',
-    activeEmptyBody: 'You can reserve available books from the College Library.',
+    activeEmptyBody: 'You can reserve available books from the University Library.',
     historyEmpty: 'You have not made any reservations yet.',
     filterEmpty: 'There are no reservations with this status.',
-    browse: 'Browse the Campus Library',
+    browse: 'Browse the University Library',
     details: 'View details',
     bookDetails: 'View book',
     back: 'Back to My Reservations',
@@ -109,7 +110,7 @@ const copy = {
     collectedAt: 'Collected on',
     pickup: 'Pickup location',
     copyCode: 'Copy code',
-    campus: 'NAWA Campus · College Library',
+    campus: 'Delta University Library · University Library',
     previous: 'Previous',
     next: 'Next',
     page: 'Page',
@@ -670,8 +671,9 @@ export function MyReservationsPage({ token, locale, go, onAuthRequired }: Common
 
   return (
     <section className="page member-reservations-page">
+      <MemberAreaNav locale={locale} currentPath="/my-reservations" go={go} />
       <header className="member-page-intro">
-        <p>NAWA Campus</p>
+        <p>{locale === 'ar' ? 'مكتبة جامعة الدلتا' : 'Delta University Library'}</p>
         <h1>{labels.title}</h1>
         <span>{labels.intro}</span>
       </header>
@@ -815,12 +817,14 @@ export function MyReservationDetails({
   if (!reservation && !error)
     return (
       <section className="page member-reservations-page">
+        <MemberAreaNav locale={locale} currentPath="/my-reservations" go={go} />
         <ListState title={labels.loadingDetail} live />
       </section>
     );
   if (error)
     return (
       <section className="page member-reservations-page">
+        <MemberAreaNav locale={locale} currentPath="/my-reservations" go={go} />
         <ListState
           title={error}
           action={
@@ -841,6 +845,7 @@ export function MyReservationDetails({
   const authors = authorsOf(reservation, locale);
   return (
     <section className="page member-reservations-page member-reservation-detail-page">
+      <MemberAreaNav locale={locale} currentPath="/my-reservations" go={go} />
       <button type="button" className="member-back-button" onClick={() => go('/my-reservations')}>
         <span aria-hidden="true">{locale === 'ar' ? '→' : '←'}</span>
         {labels.back}

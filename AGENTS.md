@@ -1,12 +1,20 @@
-# NAWA Unified Knowledge Platform — Permanent Project Guide
+# Delta University Library — Permanent Project Guide
 
 ## Source of truth and scope
 
-The complete specification at `/home/ahmed/Desktop/python videos/4-lists/Smart Library Management System.pdf` remains the original functional source of truth. The approved NAWA product-evolution and phase instructions extend it and take precedence where the old public product framing conflicts with the current direction. This file records enduring engineering rules; it does not reduce either source.
+The complete specification at `/home/ahmed/Desktop/python videos/4-lists/Smart Library Management System.pdf` remains the original functional source of truth. Approved phase instructions extend it and take precedence where older public product framing conflicts with the current direction. This file records enduring engineering rules; it does not reduce either source.
 
-The current product is **NAWA — Unified Knowledge Platform**, not a mock-up. Its long-term structure is NAWA Store (knowledge marketplace), NAWA Campus (physical university library), and NAWA Read (future digital reading), organized around **Buy — Borrow — Read**. The original library system is preserved as the technical foundation of NAWA Campus. Implement features in the required phases in `docs/implementation-plan.md`. Do not add fake controls, placeholder product flows, or TODOs for required functionality. Preserve useful existing code and keep changes scoped to the active phase.
+The primary public product and visible institution are **Delta University Library / مكتبة جامعة الدلتا**, with **Delta University for Science and Technology** as secondary institutional wording. NAWA is the underlying platform and may appear publicly only as a restrained **Powered by NAWA** signature. The existing library system, Campus catalog, circulation, reservation, authentication, and member functionality remain the technical foundation. Implement features in the required phases in `docs/implementation-plan.md`. Do not add fake controls, placeholder product flows, or TODOs for required functionality. Preserve useful existing code and keep changes scoped to the active phase.
 
-Do not rename internal packages, services, database identifiers, or the local repository solely for branding. Do not restore the obsolete Smart Library public UI or make the public marketplace look like library-management software. A central `Book` must remain capable of receiving Store, Campus, and later Read capabilities without becoming Campus-only.
+Do not rename internal packages, services, database identifiers, or the local repository solely for branding. Do not restore the obsolete Smart Library public UI, make Store/commercial language dominant, or make the public experience look like library-management software. Preserve the central `Book` model and existing Store-capable internals without promoting Buy flows in the student experience.
+
+## Delta University identity and faculty rules
+
+- Delta University Library is the dominant identity in the header, first viewport, search, account experience, and student-facing copy. NAWA must never compete visually with it.
+- Use an official Delta University logo only. Never generate, redraw, imitate, or substitute an unofficial mark. The drop-in location is `apps/frontend/public/branding/delta-university/delta-university-logo.png`; until it is supplied, show the bilingual institutional wordmark and hide the failed image cleanly.
+- Preserve the approved organized Arabic bookstore-style information hierarchy inspired by Jarir: strong search and book presentation, dense but orderly discovery, light surfaces, restrained borders/shadows, and polished RTL. Do not copy Jarir branding, assets, colors, wording, or exact layouts.
+- The faculty foundation is localization-ready and intentionally contains only the 13 confirmed Arabic names. Do not invent faculty #14, official English faculty names, departments, or book/faculty associations. Add them only from confirmed institutional data.
+- Never mutate, delete, or reassign real loans, reservations, or catalog records merely to populate a design or fixture. Automated database fixtures must stay isolated from development data.
 
 ## Monorepo and technology stack
 
@@ -51,18 +59,18 @@ Use npm workspaces for JavaScript applications and Python virtual environments f
 - Provide member, librarian, and admin dashboards; reports, charts, system settings, user and role administration, and all specified REST endpoints.
 - Deliver migrations, realistic fake seed data, automated backend/frontend tests, Swagger, Docker, CI, and the requested documentation set before final completion.
 
-## NAWA frontend design system (mandatory)
+## Delta University Library frontend design system (mandatory)
 
-All future frontend work must follow `docs/frontend-design-system.md`. It is the authoritative visual and interaction reference for the NAWA product experience. The approved Arabic public-homepage reference is the visual North Star for the entire platform; preserve this identity across future public, member, librarian, and admin work while adapting each page to its function.
+All future frontend work must follow `docs/frontend-design-system.md`. It is the authoritative visual and interaction reference for the Delta University Library experience. Preserve the established Arabic bookstore-style visual rhythm across public, member, librarian, and admin work while adapting each page to its function.
 
-- The customer-facing brand is `NAWA`, Arabic `نَوَى`. Do not rename internal packages, services, database identifiers, or historical technical documentation solely for branding.
-- The permanent brand palette is NAWA Navy `#102F5E`, Coral `#E86A6A`, Gold `#D9A441`, and Cream `#FFF9F4`. Colored interface emphasis follows an approximate 70% navy, 20% coral, and 10% gold ratio; white and light neutral surfaces may occupy most of a page.
-- Use the approved logo assets in `apps/frontend/public/brand/`. Do not redraw, distort, recolor ad hoc, or add gradients/effects to the primary logo. Use full-color on light surfaces, navy monochrome where reduced color is required, white on dark brand surfaces, and black only where required.
+- The customer-facing brand is Delta University Library; NAWA is a subtle platform credit. Do not rename internal packages, services, database identifiers, or historical technical documentation solely for branding.
+- Delta University blue `#0067A9` is the primary interface accent, with deep blue `#073F70`, pale blue `#EAF5FC`, and restrained university orange `#F58220`. White and off-white remain the dominant surfaces. These interface tokens are sampled visual companions to the supplied identity reference, not permission to redraw or alter the official mark.
+- Use the official Delta University asset path documented above. Do not redraw, distort, recolor, add effects to, or fabricate the primary logo. Existing NAWA assets remain available only for subtle platform attribution and historical/internal screens.
 - Treat the approved public homepage as a design-language reference, not as a layout template for every page. Reuse its color, typography, spacing, border, radius, shadow, button, input, card, icon, badge, navigation, and feedback patterns.
 - Arabic is the primary polished public presentation and RTL must be designed deliberately. English LTR must remain equally usable and coherent.
 
 - Use a modern, light, clean, simple, and welcoming interface. White and soft off-white surfaces are the default; do not use pure-black backgrounds or dark navigation by default.
-- Use the documented navy-led NAWA palette, restrained coral emotional accents, very sparse gold premium details, warm cream surfaces, tokens, spacing, typography, borders, shadows, status patterns, and component rules consistently. Teal and unrelated legacy accents must not remain dominant in newly created or redesigned components.
+- Use the documented Delta-blue-led interface palette, restrained orange accents, very sparse gold details, warm cream surfaces, tokens, spacing, typography, borders, shadows, status patterns, and component rules consistently. Orange, teal, coral, and unrelated legacy accents must not compete with Delta blue in newly created or redesigned components.
 - Favor generous whitespace, a clear visual hierarchy, moderate corner radii, subtle borders, and very light shadows. Keep forms, cards, tables, filters, and dashboards easy to scan.
 - Do not introduce heavy, crowded, futuristic, neon, gaming, glassmorphism, glowing, or decoration-first visual treatments. Avoid excessive gradients and animation, and do not expose too many controls at once.
 - Design for students, librarians, administrators, older users, and small touch screens. English LTR and Arabic RTL must be equally polished rather than mirrored as an afterthought.

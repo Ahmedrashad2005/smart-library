@@ -23,7 +23,7 @@ function coverTitle(title: string): string {
 
 /**
  * Shared public-catalog cover media. Real cover images remain the source of truth;
- * missing or broken images receive a deterministic, book-shaped NAWA fallback.
+ * missing or broken images receive a deterministic, book-shaped library fallback.
  */
 export function BookCoverMedia({
   url,
@@ -57,7 +57,7 @@ export function BookCoverMedia({
     >
       <span className="fallback-cover__brand" aria-hidden="true">
         <i />
-        <b>نَوَى</b>
+        <b>DELTA</b>
       </span>
       <strong dir="auto" aria-hidden="true">
         {coverTitle(title)}

@@ -2,6 +2,21 @@
 
 The full project specification is authoritative. This plan preserves its required order and makes phase completion auditable.
 
+## Delta University Library branding and faculties foundation — Complete
+
+- [x] Make Delta University Library the primary public/student identity and reduce NAWA to a subtle platform credit.
+- [x] Preserve the approved organized Arabic bookstore-style design rhythm without copying retailer branding, assets, colors, or exact layouts.
+- [x] Keep the existing search, catalog, Campus, book detail, authentication, My Loans, and My Reservations flows connected.
+- [x] Add a responsive official-logo drop-in treatment without fabricating a university logo.
+- [x] Remove delivery/payment/Store-first emphasis from the student header, hero, and service strip without destructive backend removal.
+- [x] Add the prominent Arabic-first faculties section and `/faculties` plus `/faculties/:slug` routes.
+- [x] Add the minimal `Faculty` and `BookFaculty` data foundation and public safe APIs.
+- [x] Install only the 13 confirmed Arabic faculty names; leave official English labels and faculty #14 unpopulated until confirmed.
+- [x] Preserve real books, loans, reservations, copy states, counters, and existing student behavior.
+- [x] Add focused frontend and database-backed API coverage and document the new response/filter contract.
+
+This direction phase adds no AI/Gemini assistant, departments, QR/scanning, large librarian dashboard, or fake faculty/book associations. Store-capable internals remain for a future explicit decision but are no longer the dominant student experience.
+
 ## Phase 1 — Foundation
 
 - [x] Inspect and preserve the initial repository state.
@@ -171,7 +186,7 @@ Phase 5.3.1 exposes reservation creation only. Cancellation UI, pickup, QR/scann
 - [x] Extend the shared safe reservation response with cover and author display data and verify it through the existing database-backed lifecycle suite.
 - [x] Verify meaningful route/API/page tests, Arabic RTL and English LTR, responsive 1440/900/390 layouts, full regressions, Docker health, and Campus data integrity.
 
-Phase 5.3.2A is read-only. Phase 5.3.2B next adds Cancellation, Deadline UX, and final acceptance. Pickup, QR/scanning, `COLLECTED`, Reservation-to-Loan conversion, notifications, and staff reservation actions remain outside that scope.
+Phase 5.3.2A remains the read-only foundation. Phase 5.3.2B adds Cancellation, Deadline UX, and final acceptance without changing the completed list/details contract. Pickup, QR/scanning, `COLLECTED`, Reservation-to-Loan conversion, notifications, and staff reservation actions remain outside that scope.
 
 #### Phase 5.3.2B — Cancellation, Deadline UX & Final Acceptance — Complete
 
@@ -184,9 +199,19 @@ Phase 5.3.2A is read-only. Phase 5.3.2B next adds Cancellation, Deadline UX, and
 
 **Phase 5.3.2 — My Reservations is complete:** members can view, filter, inspect, understand the deadline, and cancel their own eligible reservation while the backend remains lifecycle authority.
 
+#### Phase 5.3.3 — Member Area Visual Polish & My Loans Redesign — Complete
+
+- [x] Replace the member-facing generic circulation table with bilingual, responsive, book-oriented loan activity cards and safe owned-loan details.
+- [x] Add shared My Loans/My Reservations local navigation while preserving their existing MEMBER-only routes and backend ownership boundaries.
+- [x] Add real server-side member search by localized title, author, and copy code with status filters, URL pagination, safe loading/empty/error recovery, cover fallback, and no staff-only metadata.
+- [x] Expose renewal eligibility and limits from the existing backend loan policy without changing its rules; confirm renewals in an accessible dialog and refresh authoritative state after lifecycle conflicts.
+- [x] Verify keyboard behavior, duplicate-submit protection, Arabic RTL/English LTR, 1440/900/390 responsive layouts, privacy, full regressions, Docker health, and the unchanged real MEMBER Loan/Reservation fingerprint.
+
+Phase 5.3.3 is a member presentation and safe-response refinement only. It adds no pickup, QR/scanning, `COLLECTED`, Reservation-to-Loan conversion, fines, payments, notifications, or new circulation policy.
+
 ### Later Phase 5 work — Not started
 
-- [ ] Phase 5.3.3: complete Member Area visual polish and redesign My Loans using the established NAWA member patterns; do not change loan business rules without separate authorization.
+- [ ] Phase 5.3.4: continue only from separately approved Member Area scope; do not infer pickup, notification, fine/payment, or broader dashboard authorization.
 - [ ] Later pickup phase: implement the separately approved pickup/collection scope; if authorized, it must atomically coordinate `COLLECTED`, copy/Loan state, counters, pickup proof, and replay safety.
 - [ ] Implement verified borrower ratings/reviews.
 - [ ] Implement in-app/email notifications, preferences, BullMQ jobs, and schedules.

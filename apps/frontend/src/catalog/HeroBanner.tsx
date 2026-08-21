@@ -5,37 +5,38 @@ import { PublicIcon } from './PublicIcon';
 type Props = {
   locale: PublicLocale;
   onBrowseBooks: () => void;
-  onCampus: () => void;
+  onFaculties: () => void;
 };
 
 const copy = {
   ar: {
-    firstLine: 'اكتشف كل ما ينمّي',
-    secondLine: 'معرفتك',
-    introduction: 'كتب، أدوات وتقنيات مختارة بعناية تساعدك تتعلم وتتطور.',
-    actions: 'استكشف نَوَى',
-    browseBooks: 'تصفح الكتب',
-    campus: 'مكتبة الكلية',
-    delivery: 'توصيل سريع',
-    secure: 'دفع آمن',
-    return: 'إرجاع سهل',
-    quality: 'جودة مضمونة',
+    firstLine: 'مكتبة جامعة الدلتا',
+    secondLine: 'معرفة تدعم مستقبلك',
+    introduction: 'اكتشف كتب الجامعة ومراجعها الأكاديمية، واعثر على ما تحتاجه حسب تخصصك.',
+    actions: 'استكشف مكتبة جامعة الدلتا',
+    browseBooks: 'تصفح فهرس الكتب',
+    faculties: 'استعرض الكليات',
+    campus: 'مكتبة جامعية فعلية',
+    collection: 'مراجع أكاديمية',
+    borrowing: 'استعارة منظمة',
+    location: 'موقع نسخة واضح',
   },
   en: {
-    firstLine: 'Discover everything that grows',
-    secondLine: 'your knowledge',
-    introduction: 'Carefully selected books, tools, and technology to help you learn and grow.',
-    actions: 'Explore NAWA',
-    browseBooks: 'Browse books',
-    campus: 'Campus Library',
-    delivery: 'Fast delivery',
-    secure: 'Secure payment',
-    return: 'Easy returns',
-    quality: 'Quality guaranteed',
+    firstLine: 'Delta University Library',
+    secondLine: 'Knowledge for your future',
+    introduction:
+      'Discover university books and academic references organized around your studies.',
+    actions: 'Explore Delta University Library',
+    browseBooks: 'Browse the book catalog',
+    faculties: 'Explore faculties',
+    campus: 'Physical university library',
+    collection: 'Academic references',
+    borrowing: 'Organized borrowing',
+    location: 'Clear copy location',
   },
 } as const;
 
-export function HeroBanner({ locale, onBrowseBooks, onCampus }: Props): JSX.Element {
+export function HeroBanner({ locale, onBrowseBooks, onFaculties }: Props): JSX.Element {
   const labels = copy[locale];
 
   return (
@@ -54,9 +55,9 @@ export function HeroBanner({ locale, onBrowseBooks, onCampus }: Props): JSX.Elem
             <PublicIcon name="categories" />
             {labels.browseBooks}
           </button>
-          <button type="button" className="nawa-hero__action is-secondary" onClick={onCampus}>
-            <PublicIcon name="book" />
-            {labels.campus}
+          <button type="button" className="nawa-hero__action is-secondary" onClick={onFaculties}>
+            <PublicIcon name="categories" />
+            {labels.faculties}
           </button>
         </div>
         <div
@@ -65,20 +66,20 @@ export function HeroBanner({ locale, onBrowseBooks, onCampus }: Props): JSX.Elem
           aria-label={locale === 'ar' ? 'مزايا الخدمة' : 'Service benefits'}
         >
           <span role="listitem">
-            <PublicIcon name="delivery" />
-            {labels.delivery}
-          </span>
-          <span role="listitem">
-            <PublicIcon name="security" />
-            {labels.secure}
-          </span>
-          <span role="listitem">
-            <PublicIcon name="return" />
-            {labels.return}
+            <PublicIcon name="book" />
+            {labels.campus}
           </span>
           <span role="listitem">
             <PublicIcon name="quality" />
-            {labels.quality}
+            {labels.collection}
+          </span>
+          <span role="listitem">
+            <PublicIcon name="history" />
+            {labels.borrowing}
+          </span>
+          <span role="listitem">
+            <PublicIcon name="location" />
+            {labels.location}
           </span>
         </div>
       </div>

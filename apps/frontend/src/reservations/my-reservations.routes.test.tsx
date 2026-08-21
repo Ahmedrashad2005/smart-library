@@ -104,8 +104,8 @@ describe('My Reservations routing and authentication', () => {
         return {
           id: 'reservation-route-id',
           status: 'ACTIVE',
-          reservedAt: '2026-08-13T09:00:00Z',
-          expiresAt: '2026-08-14T09:00:00Z',
+          reservedAt: '2029-08-13T09:00:00Z',
+          expiresAt: '2030-08-14T09:00:00Z',
           book: {
             id: 'book',
             slug: 'route-book',

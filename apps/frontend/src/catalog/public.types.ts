@@ -16,8 +16,8 @@ export type PublicCategory = {
 
 const publicCategoryLabels: Record<string, { en: string; ar: string }> = {
   'campus-uncategorized': {
-    en: 'Campus Library books',
-    ar: 'كتب مكتبة الكلية',
+    en: 'University Library books',
+    ar: 'كتب المكتبة الجامعية',
   },
   'campus-cyber-security-communication': {
     en: 'Cyber security',

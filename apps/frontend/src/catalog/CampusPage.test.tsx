@@ -91,16 +91,16 @@ describe('CampusPage', () => {
     render(<CampusPage locale="en" go={go} />);
 
     expect(
-      screen.getByRole('status', { name: 'Loading Campus Library books' }),
+      screen.getByRole('status', { name: 'Loading University Library books' }),
     ).toBeInTheDocument();
     expect(screen.getByText('Loading library location')).toBeInTheDocument();
-    expect(await screen.findByRole('heading', { name: 'College Library' })).toBeInTheDocument();
-    const summary = screen.getByRole('group', { name: 'Campus Library summary' });
+    expect(await screen.findByRole('heading', { name: 'University Library' })).toBeInTheDocument();
+    const summary = screen.getByRole('group', { name: 'Delta University Library summary' });
     expect(within(summary).getByText(/Floor 3/)).toHaveTextContent('Floor 3 · Room 315');
     expect(within(summary).getByText('23 books')).toBeInTheDocument();
     expect(mockedApi).toHaveBeenCalledWith('/books?campus=true&page=1&limit=1');
     expect(screen.getByRole('heading', { name: 'Campus Knowledge' })).toBeInTheDocument();
-    expect(screen.getByText('Available in the Campus Library')).toBeInTheDocument();
+    expect(screen.getByText('Available in the University Library')).toBeInTheDocument();
     expect(screen.getByLabelText('1 available · 1 copy')).toBeInTheDocument();
     expect(screen.queryByText(/Reserve|احجز/)).not.toBeInTheDocument();
 
@@ -123,13 +123,13 @@ describe('CampusPage', () => {
     installSuccessfulApi();
     render(<CampusPage locale="ar" go={vi.fn()} />);
 
-    expect(await screen.findByRole('heading', { name: 'مكتبة الكلية' })).toBeInTheDocument();
-    const summary = screen.getByRole('group', { name: 'ملخص مكتبة الكلية' });
+    expect(await screen.findByRole('heading', { name: 'المكتبة الجامعية' })).toBeInTheDocument();
+    const summary = screen.getByRole('group', { name: 'ملخص مكتبة جامعة الدلتا' });
     expect(within(summary).getByText(/الطابق الثالث/)).toHaveTextContent(
       'الطابق الثالث · غرفة 315',
     );
     expect(within(summary).getByText('23 كتاب')).toBeInTheDocument();
-    expect(screen.getByText('متاح في مكتبة الكلية')).toBeInTheDocument();
+    expect(screen.getByText('متاح في المكتبة الجامعية')).toBeInTheDocument();
     expect(document.documentElement).toHaveAttribute('dir', 'rtl');
   });
 
@@ -150,10 +150,10 @@ describe('CampusPage', () => {
     const user = userEvent.setup();
     render(<CampusPage locale="en" go={vi.fn()} />);
 
-    const summary = await screen.findByRole('group', { name: 'Campus Library summary' });
+    const summary = await screen.findByRole('group', { name: 'Delta University Library summary' });
     expect(within(summary).getByText('17 books')).toBeInTheDocument();
 
-    await user.type(screen.getByLabelText('Search Campus Library books'), 'focused');
+    await user.type(screen.getByLabelText('Search University Library books'), 'focused');
     await user.click(screen.getByRole('button', { name: 'Search' }));
 
     await waitFor(() =>
@@ -169,7 +169,7 @@ describe('CampusPage', () => {
     render(<CampusPage locale="en" go={vi.fn()} />);
     await screen.findByRole('heading', { name: 'Campus Knowledge' });
 
-    await user.type(screen.getByLabelText('Search Campus Library books'), 'machine learning');
+    await user.type(screen.getByLabelText('Search University Library books'), 'machine learning');
     await user.click(screen.getByRole('button', { name: 'Search' }));
     await waitFor(() =>
       expect(mockedApi).toHaveBeenCalledWith(expect.stringContaining('q=machine+learning')),
@@ -222,7 +222,9 @@ describe('CampusPage', () => {
     render(<CampusPage locale="en" go={vi.fn()} />);
 
     expect(
-      await screen.findByRole('heading', { name: 'We could not load the Campus Library books.' }),
+      await screen.findByRole('heading', {
+        name: 'We could not load the University Library books.',
+      }),
     ).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Try again' }));
     expect(await screen.findByRole('heading', { name: 'Campus Knowledge' })).toBeInTheDocument();

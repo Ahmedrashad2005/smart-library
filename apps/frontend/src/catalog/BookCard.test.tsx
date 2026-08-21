@@ -20,12 +20,12 @@ const book: PublicBook = {
 };
 
 describe('BookCard Campus availability', () => {
-  it('uses the deterministic NAWA book-cover fallback for missing and broken images', () => {
+  it('uses the deterministic Delta library book-cover fallback for missing and broken images', () => {
     const { rerender } = render(<BookCard book={book} locale="en" go={vi.fn()} />);
 
     expect(
       screen.getByRole('img', { name: 'No cover available: Campus Card Book' }),
-    ).toHaveTextContent('نَوَى');
+    ).toHaveTextContent('DELTA');
     expect(
       screen.getByRole('img', { name: 'No cover available: Campus Card Book' }),
     ).toHaveTextContent('Campus Card Book');
@@ -40,7 +40,7 @@ describe('BookCard Campus availability', () => {
     fireEvent.error(screen.getByAltText('Cover of Campus Card Book'));
     expect(
       screen.getByRole('img', { name: 'No cover available: Campus Card Book' }),
-    ).toHaveTextContent('نَوَى');
+    ).toHaveTextContent('DELTA');
   });
 
   it('keeps English fallback metadata correctly directed in Arabic catalog cards', () => {
@@ -64,7 +64,7 @@ describe('BookCard Campus availability', () => {
   it('shows a subtle accurate Campus badge and uses Campus counts inside Campus scope', () => {
     render(<BookCard book={book} locale="en" go={vi.fn()} availabilityScope="campus" />);
 
-    expect(screen.getByText('Available in the Campus Library')).toHaveClass(
+    expect(screen.getByText('Available in the University Library')).toHaveClass(
       'campus-book-badge',
       'is-available',
     );
@@ -85,7 +85,7 @@ describe('BookCard Campus availability', () => {
       <BookCard book={unavailableOnCampus} locale="en" go={vi.fn()} availabilityScope="campus" />,
     );
 
-    expect(screen.getByText('Currently unavailable in the Campus Library')).toHaveClass(
+    expect(screen.getByText('Currently unavailable in the University Library')).toHaveClass(
       'campus-book-badge',
       'is-unavailable',
     );

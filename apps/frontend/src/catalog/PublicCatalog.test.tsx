@@ -15,6 +15,28 @@ const categories: PublicCategory[] = [
   { id: 'category-history', nameEn: 'History', nameAr: 'التاريخ', slug: 'history' },
   { id: 'category-science', nameEn: 'Science', nameAr: 'العلوم', slug: 'science' },
 ];
+const faculties = [
+  'كلية الطب البشري',
+  'كلية طب الفم والأسنان',
+  'كلية الطب البيطري',
+  'كلية العلاج الطبيعي',
+  'كلية الصيدلة',
+  'كلية تكنولوجيا العلوم الصحية',
+  'كلية التمريض',
+  'كلية هندسة الطاقة والبترول',
+  'كلية الهندسة',
+  'كلية الذكاء الاصطناعي',
+  'كلية الحقوق',
+  'كلية الإدارة',
+  'كلية الآداب',
+].map((nameAr, index) => ({
+  id: `faculty-${index + 1}`,
+  slug: `faculty-${index + 1}`,
+  nameAr,
+  nameEn: null,
+  displayOrder: index + 1,
+  bookCount: 0,
+}));
 const availableBook: PublicBook = {
   id: 'book-blue',
   slug: 'the-blue-book',
@@ -61,6 +83,7 @@ function result(
 function successfulApi(fullCatalog = result([availableBook, unavailableBook])): void {
   mockedApi.mockImplementation(async (path: string) => {
     if (path === '/categories') return categories;
+    if (path === '/faculties') return faculties;
     if (path.includes('campus=true')) return result([availableBook]);
     if (path.includes('limit=6&available=true')) return result([availableBook]);
     if (path.includes('limit=6&sort=newest')) return result([unavailableBook]);
@@ -114,11 +137,11 @@ describe('PublicCatalog', () => {
     await screen.findByRole('heading', { name: 'New releases' });
 
     expect(screen.queryByRole('search')).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Browse books' }));
-    await user.click(screen.getByRole('button', { name: 'Campus Library' }));
+    await user.click(screen.getByRole('button', { name: 'Browse the book catalog' }));
+    await user.click(screen.getByRole('button', { name: 'Explore faculties' }));
 
     expect(go).toHaveBeenNthCalledWith(1, '/books');
-    expect(go).toHaveBeenNthCalledWith(2, '/campus');
+    expect(go).toHaveBeenNthCalledWith(2, '/faculties');
   });
 
   it('selects a real category and reloads the catalog with its id', async () => {
@@ -160,6 +183,7 @@ describe('PublicCatalog', () => {
   it('renders a friendly no-category state', async () => {
     mockedApi.mockImplementation(async (path: string) => {
       if (path === '/categories') return [];
+      if (path === '/faculties') return faculties;
       return result([]);
     });
     render(<PublicCatalog locale="en" go={vi.fn()} />);
@@ -184,6 +208,7 @@ describe('PublicCatalog', () => {
   it('renders a catalog error with an operable retry action', async () => {
     mockedApi.mockImplementation(async (path: string) => {
       if (path === '/categories') return categories;
+      if (path === '/faculties') return faculties;
       if (path.includes('limit=8')) throw new Error('Catalog service is unavailable');
       return result([availableBook]);
     });
@@ -202,6 +227,7 @@ describe('PublicCatalog', () => {
   it('moves to the next catalog page through the supported page query', async () => {
     mockedApi.mockImplementation(async (path: string) => {
       if (path === '/categories') return categories;
+      if (path === '/faculties') return faculties;
       if (path.includes('limit=4')) return result([availableBook]);
       if (path.includes('page=2'))
         return result([unavailableBook], { page: 2, total: 9, totalPages: 2 });
@@ -245,13 +271,15 @@ describe('PublicCatalog', () => {
     const user = userEvent.setup();
     const { container } = render(<PublicCatalog locale="ar" go={go} showFullCatalog={false} />);
 
-    expect(screen.getByRole('heading', { name: 'اكتشف كل ما ينمّي معرفتك' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'مكتبة جامعة الدلتا معرفة تدعم مستقبلك' }),
+    ).toBeInTheDocument();
     const newHeading = await screen.findByRole('heading', { name: 'إصدارات جديدة' });
     const popularHeading = screen.getByRole('heading', { name: 'الأكثر قراءة' });
     const availableHeading = screen.getByRole('heading', { name: 'متاح الآن' });
-    const campusShelf = (await screen.findByRole('heading', { name: 'من مكتبة كليتك' })).closest(
-      '.book-shelf-section',
-    ) as HTMLElement;
+    const campusShelf = (
+      await screen.findByRole('heading', { name: 'من مكتبة جامعة الدلتا' })
+    ).closest('.book-shelf-section') as HTMLElement;
     expect(
       newHeading.compareDocumentPosition(popularHeading) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
@@ -261,12 +289,14 @@ describe('PublicCatalog', () => {
     expect(
       campusShelf.compareDocumentPosition(availableHeading) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
-    expect(within(campusShelf).getByText('في مكتبة الكلية')).toBeInTheDocument();
+    expect(within(campusShelf).getByText('في المكتبة الجامعية')).toBeInTheDocument();
     await user.click(within(campusShelf).getByRole('button', { name: 'عرض الكل' }));
     expect(go).toHaveBeenCalledWith('/campus');
-    expect(screen.getByRole('region', { name: 'خدمات نَوَى' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'تصفح الكتب' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'مكتبة الكلية' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'مزايا مكتبة جامعة الدلتا' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'تصفح فهرس الكتب' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'استعرض الكليات' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'كليات جامعة الدلتا' })).toBeInTheDocument();
+    expect(screen.getByText('Powered by NAWA · نَوَى')).toBeInTheDocument();
     expect(screen.queryByRole('search')).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'الفهرس الكامل' })).not.toBeInTheDocument();
     expect(container.querySelector('.nawa-hero__illustration')).toHaveAttribute(
@@ -287,6 +317,7 @@ describe('PublicCatalog', () => {
     }));
     mockedApi.mockImplementation(async (path: string) => {
       if (path === '/categories') return categories;
+      if (path === '/faculties') return faculties;
       return result(shelfBooks);
     });
 

@@ -17,13 +17,17 @@ import {
   type MemberEligibility,
 } from './api';
 import { dueDays, loanCanRenew, remainingRenewals } from './access';
+import type { PublicLocale } from '../catalog/public.types';
+import { MemberLoanDetails, MemberLoansPage } from './MemberLoansPage';
 
 type Props = {
   path: string;
   token: string;
   staff: boolean;
+  locale?: PublicLocale;
   go: (to: string) => void;
   notify: (message: string) => void;
+  onAuthRequired?: () => void;
 };
 const conditions: CopyCondition[] = ['NEW', 'GOOD', 'FAIR', 'POOR', 'DAMAGED'];
 const date = (value?: string | null) =>
@@ -72,13 +76,11 @@ export function LoanRoute(props: Props): JSX.Element {
   return <LoanList {...props} mine={!props.staff} />;
 }
 
-export function LoanList({
-  token,
-  staff,
-  go,
-  notify,
-  mine,
-}: Props & { mine: boolean }): JSX.Element {
+export function LoanList(props: Props & { mine: boolean }): JSX.Element {
+  return props.mine ? <MemberLoansPage {...props} /> : <StaffLoanList {...props} />;
+}
+
+function StaffLoanList({ token, staff, go, notify, mine }: Props & { mine: boolean }): JSX.Element {
   const [result, setResult] = useState<LoanResults | null>(null);
   const [error, setError] = useState('');
   const [q, setQ] = useState('');
@@ -678,7 +680,11 @@ export function ReturnsPage({ token, go, notify }: Props): JSX.Element {
   );
 }
 
-export function LoanDetails({ id, token, staff, go, notify }: Props & { id: string }): JSX.Element {
+export function LoanDetails(props: Props & { id: string }): JSX.Element {
+  return props.staff ? <StaffLoanDetails {...props} /> : <MemberLoanDetails {...props} />;
+}
+
+function StaffLoanDetails({ id, token, staff, go, notify }: Props & { id: string }): JSX.Element {
   const [loan, setLoan] = useState<Loan | null>(null);
   const [error, setError] = useState('');
   const [renewing, setRenewing] = useState(false);

@@ -39,8 +39,8 @@ export function BookShelfCard({
           details: 'تفاصيل الكتاب',
           new: 'جديد',
           noCover: 'لا يوجد غلاف',
-          campusAvailable: 'في مكتبة الكلية',
-          campusUnavailable: 'غير متاح في الكلية',
+          campusAvailable: 'في المكتبة الجامعية',
+          campusUnavailable: 'غير متاح في المكتبة الجامعية',
         }
       : {
           available: 'Available',
@@ -48,8 +48,8 @@ export function BookShelfCard({
           details: 'Book details',
           new: 'New',
           noCover: 'No cover',
-          campusAvailable: 'Campus Library',
-          campusUnavailable: 'Unavailable on Campus',
+          campusAvailable: 'University Library',
+          campusUnavailable: 'Unavailable at the University Library',
         };
 
   return (

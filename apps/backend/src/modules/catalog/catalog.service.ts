@@ -34,6 +34,7 @@ export class CatalogService {
     query: {
       q?: string;
       categoryId?: string;
+      facultySlug?: string;
       language?: string;
       available?: string;
       campus?: string;
@@ -75,6 +76,13 @@ export class CatalogService {
     const where: Prisma.BookWhereInput = {
       ...archiveWhere,
       ...(query.categoryId ? { categoryId: query.categoryId } : {}),
+      ...(query.facultySlug
+        ? {
+            faculties: {
+              some: { faculty: { slug: query.facultySlug, isActive: true } },
+            },
+          }
+        : {}),
       ...(query.language ? { language: query.language } : {}),
       ...(query.q
         ? {
@@ -115,6 +123,7 @@ export class CatalogService {
           category: true,
           publisher: true,
           authors: { include: { author: true } },
+          faculties: { include: { faculty: true } },
           copies: {
             where: {
               isArchived: false,
@@ -277,6 +286,7 @@ export class CatalogService {
         category: true,
         publisher: true,
         authors: { include: { author: true } },
+        faculties: { include: { faculty: true } },
         copies: {
           where: { isArchived: false, deletedAt: null },
           include: {

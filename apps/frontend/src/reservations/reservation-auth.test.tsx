@@ -70,7 +70,9 @@ describe('reservation authentication and safe return flow', () => {
       '/books/book-return?source=campus',
     );
     expect(screen.getByRole('heading', { name: 'Sign in' })).toBeVisible();
-    expect(screen.getByText(/access your loans and College Library reservations/i)).toBeVisible();
+    expect(
+      screen.getByText(/access your loans and University Library reservations/i),
+    ).toBeVisible();
     expect(
       screen.queryByText(/protected area|access token|manage the library/i),
     ).not.toBeInTheDocument();
@@ -103,7 +105,7 @@ describe('reservation authentication and safe return flow', () => {
     expect(screen.getByRole('heading', { name: 'تسجيل الدخول' })).toBeVisible();
     expect(screen.getByLabelText('البريد الإلكتروني')).toBeVisible();
     expect(screen.getByLabelText('كلمة المرور')).toBeVisible();
-    expect(screen.getByText(/استعاراتك وحجوزاتك من مكتبة الكلية/)).toBeVisible();
+    expect(screen.getByText(/استعاراتك وحجوزاتك من المكتبة الجامعية/)).toBeVisible();
     expect(
       screen.queryByText(/protected area|access token|manage the library/i),
     ).not.toBeInTheDocument();

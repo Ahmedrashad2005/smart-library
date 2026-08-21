@@ -17,8 +17,8 @@ const reservation: ReservationResult = {
   bookId: 'book-private-id',
   bookCopyId: 'copy-private-id',
   status: 'ACTIVE',
-  reservedAt: '2026-08-13T09:00:00.000Z',
-  expiresAt: '2026-08-14T09:00:00.000Z',
+  reservedAt: '2029-08-13T09:00:00.000Z',
+  expiresAt: '2030-08-14T09:00:00.000Z',
   cancelledAt: null,
   collectedAt: null,
   canCancel: true,
@@ -192,9 +192,9 @@ describe('My Reservations list', () => {
     render(<MyReservationsPage {...props} />);
     expect(await screen.findByText('No active reservations')).toBeInTheDocument();
     expect(
-      screen.getByText('You can reserve available books from the College Library.'),
+      screen.getByText('You can reserve available books from the University Library.'),
     ).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Browse the Campus Library' }));
+    await user.click(screen.getByRole('button', { name: 'Browse the University Library' }));
     expect(props.go).toHaveBeenCalledWith('/campus');
   });
 

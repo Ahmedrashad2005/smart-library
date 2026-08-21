@@ -9,6 +9,7 @@ import { CampusPage } from './catalog/CampusPage';
 import { canAccessLoanRoute, isMemberLoanRoute, isStaffLoanRoute } from './loans/access';
 import { LoanRoute } from './loans/pages';
 import { MyReservationsRoute } from './reservations/MyReservationsPage';
+import { FacultiesPage } from './faculties/FacultiesPage';
 import {
   canManageRoute,
   managementListQuery,
@@ -141,7 +142,9 @@ function App(): JSX.Element {
   };
   const area = routeArea(path);
   const management = !!area;
-  const loanRoute = isStaffLoanRoute(path) || isMemberLoanRoute(path);
+  const staffLoanRoute = isStaffLoanRoute(path);
+  const memberLoanRoute = isMemberLoanRoute(path);
+  const loanRoute = staffLoanRoute || memberLoanRoute;
   const reservationRoute = path === '/my-reservations' || /^\/my-reservations\/[^/]+$/.test(path);
   let page: JSX.Element;
   if (path === '/auth/login') {
@@ -194,7 +197,39 @@ function App(): JSX.Element {
         onAuthRequired={() => go(loginPath(`${path}${window.location.search}`))}
       />
     );
-  else if (loanRoute && !canAccessLoanRoute(!!session, session?.role, path))
+  else if (memberLoanRoute && !sessionReady)
+    page = (
+      <MemberRouteState
+        locale={arabic ? 'ar' : 'en'}
+        message={arabic ? 'جارٍ التحقق من حسابك…' : 'Checking your account…'}
+      />
+    );
+  else if (memberLoanRoute && !session)
+    page = (
+      <AuthRedirect
+        go={go}
+        returnTo={`${path}${window.location.search}`}
+        locale={arabic ? 'ar' : 'en'}
+      />
+    );
+  else if (memberLoanRoute && session?.role !== 'MEMBER')
+    page = (
+      <MemberRouteState
+        locale={arabic ? 'ar' : 'en'}
+        error
+        message={
+          arabic
+            ? 'إعاراتي متاحة لحسابات الأعضاء فقط.'
+            : 'My Loans is available to member accounts only.'
+        }
+        description={
+          arabic
+            ? 'استخدم حساب عضو للوصول إلى إعارات المكتبة الجامعية.'
+            : 'Use a member account to view University Library loans.'
+        }
+      />
+    );
+  else if (staffLoanRoute && !canAccessLoanRoute(!!session, session?.role, path))
     page = <LoginGate session={session} setSession={setSession} locale={arabic ? 'ar' : 'en'} />;
   else if (loanRoute)
     page = (
@@ -202,8 +237,10 @@ function App(): JSX.Element {
         path={path}
         token={session!.token}
         staff={isStaffLoanRoute(path)}
+        locale={arabic ? 'ar' : 'en'}
         go={go}
         notify={setNotice}
+        onAuthRequired={() => go(loginPath(`${path}${window.location.search}`))}
       />
     );
   else if (management && !canManageRoute(session?.role, path))
@@ -221,6 +258,14 @@ function App(): JSX.Element {
   )
     page = <CopiesManager path={path} token={session!.token} go={go} notify={setNotice} />;
   else if (area) page = <MasterManager area={area} token={session!.token} notify={setNotice} />;
+  else if (path === '/faculties' || /^\/faculties\/[^/]+$/.test(path))
+    page = (
+      <FacultiesPage
+        locale={arabic ? 'ar' : 'en'}
+        slug={path === '/faculties' ? undefined : path.split('/').at(-1)}
+        go={go}
+      />
+    );
   else if (path.startsWith('/books/'))
     page = (
       <BookDetail
@@ -282,10 +327,12 @@ function AuthRedirect({
 function MemberRouteState({
   locale,
   message,
+  description,
   error = false,
 }: {
   locale: 'ar' | 'en';
   message: string;
+  description?: string;
   error?: boolean;
 }): JSX.Element {
   return (
@@ -295,9 +342,10 @@ function MemberRouteState({
         {!error && <span className="spinner" aria-hidden="true" />}
         {error && (
           <p>
-            {locale === 'ar'
-              ? 'استخدم حساب عضو للوصول إلى حجوزات مكتبة الكلية.'
-              : 'Use a member account to view College Library reservations.'}
+            {description ??
+              (locale === 'ar'
+                ? 'استخدم حساب عضو للوصول إلى حجوزات المكتبة الجامعية.'
+                : 'Use a member account to view University Library reservations.')}
           </p>
         )}
       </div>
@@ -346,18 +394,18 @@ function LoginGate({
   const labels =
     locale === 'ar'
       ? {
-          eyebrow: 'حساب نَوَى',
+          eyebrow: 'حساب مكتبة جامعة الدلتا',
           title: 'تسجيل الدخول',
-          description: 'سجّل دخولك للوصول إلى استعاراتك وحجوزاتك من مكتبة الكلية.',
+          description: 'سجّل دخولك للوصول إلى استعاراتك وحجوزاتك من المكتبة الجامعية.',
           email: 'البريد الإلكتروني',
           password: 'كلمة المرور',
           submit: 'تسجيل الدخول',
           saving: 'جارٍ تسجيل الدخول…',
         }
       : {
-          eyebrow: 'NAWA account',
+          eyebrow: 'Delta University Library account',
           title: 'Sign in',
-          description: 'Sign in to access your loans and College Library reservations.',
+          description: 'Sign in to access your loans and University Library reservations.',
           email: 'Email',
           password: 'Password',
           submit: 'Sign in',
@@ -367,8 +415,8 @@ function LoginGate({
     <section className="page member-login-page">
       <div className="member-login-card">
         <div className="member-login-brand" aria-hidden="true">
-          <span>NAWA</span>
-          <b>نَوَى</b>
+          <span>DELTA UNIVERSITY</span>
+          <b>{locale === 'ar' ? 'المكتبة الجامعية' : 'UNIVERSITY LIBRARY'}</b>
         </div>
         <p className="member-login-eyebrow">{labels.eyebrow}</p>
         <h1>{labels.title}</h1>

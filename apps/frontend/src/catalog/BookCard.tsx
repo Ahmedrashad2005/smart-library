@@ -22,8 +22,8 @@ const text = {
     noCover: 'No cover available',
     coverOf: 'Cover of',
     category: 'Uncategorized',
-    campusAvailable: 'Available in the Campus Library',
-    campusUnavailable: 'Currently unavailable in the Campus Library',
+    campusAvailable: 'Available in the University Library',
+    campusUnavailable: 'Currently unavailable in the University Library',
   },
   ar: {
     available: 'متاح',
@@ -36,8 +36,8 @@ const text = {
     noCover: 'لا توجد صورة غلاف',
     coverOf: 'غلاف كتاب',
     category: 'غير مصنف',
-    campusAvailable: 'متاح في مكتبة الكلية',
-    campusUnavailable: 'غير متاح حاليًا في مكتبة الكلية',
+    campusAvailable: 'متاح في المكتبة الجامعية',
+    campusUnavailable: 'غير متاح حاليًا في المكتبة الجامعية',
   },
 } as const;
 

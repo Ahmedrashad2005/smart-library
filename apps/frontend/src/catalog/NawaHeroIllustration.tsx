@@ -154,10 +154,10 @@ export function NawaHeroIllustration(): JSX.Element {
           <path d="M426 132V201" stroke="#ffffff" strokeWidth="2" opacity="0.85" />
           <circle cx="426" cy="116" r="5" fill="#e86a6a" />
           <text x="426" y="250" fill="#ffffff" fontSize="20" fontWeight="700" textAnchor="middle">
-            عالم نَوَى
+            مكتبة الدلتا
           </text>
           <text x="426" y="275" fill="#d9e4ef" fontSize="9" letterSpacing="3" textAnchor="middle">
-            KNOWLEDGE
+            UNIVERSITY LIBRARY
           </text>
           <path d="M375 300H460" stroke="#d9a441" strokeWidth="2" opacity="0.75" />
         </g>

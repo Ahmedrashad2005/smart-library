@@ -66,6 +66,22 @@ const sectionNames = [
   ['KID', 'Children Corner', 'ركن الأطفال', 'G'],
 ] as const;
 
+const deltaUniversityFaculties = [
+  ['medicine', 'كلية الطب البشري'],
+  ['oral-and-dental-medicine', 'كلية طب الفم والأسنان'],
+  ['veterinary-medicine', 'كلية الطب البيطري'],
+  ['physical-therapy', 'كلية العلاج الطبيعي'],
+  ['pharmacy', 'كلية الصيدلة'],
+  ['health-sciences-technology', 'كلية تكنولوجيا العلوم الصحية'],
+  ['nursing', 'كلية التمريض'],
+  ['energy-and-petroleum-engineering', 'كلية هندسة الطاقة والبترول'],
+  ['engineering', 'كلية الهندسة'],
+  ['artificial-intelligence', 'كلية الذكاء الاصطناعي'],
+  ['law', 'كلية الحقوق'],
+  ['management', 'كلية الإدارة'],
+  ['arts', 'كلية الآداب'],
+] as const;
+
 const campusCategoryDefinitions = [
   {
     sourceCollection: null,
@@ -403,6 +419,16 @@ async function main(): Promise<void> {
       description: 'Minimum account password length',
     },
   });
+
+  await Promise.all(
+    deltaUniversityFaculties.map(([slug, nameAr], index) =>
+      prisma.faculty.upsert({
+        where: { slug },
+        update: { nameAr, displayOrder: index + 1, isActive: true },
+        create: { slug, nameAr, displayOrder: index + 1 },
+      }),
+    ),
+  );
   await prisma.systemSetting.upsert({
     where: { key: 'reservation.pickupWindowHours' },
     update: {

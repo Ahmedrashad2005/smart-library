@@ -43,7 +43,7 @@ describe('BookShelfCard', () => {
       name.startsWith('shelf-no-cover--'),
     );
 
-    expect(fallback).toHaveTextContent('نَوَى');
+    expect(fallback).toHaveTextContent('DELTA');
     expect(fallback).toHaveTextContent('رحلة طويلة جدًا عبر عوالم');
     expect(fallback).toHaveTextContent('مايا ستون');
 
@@ -103,7 +103,10 @@ describe('BookShelfCard', () => {
     };
     render(<BookShelfCard book={campusBook} locale="en" go={vi.fn()} campusScope />);
 
-    expect(screen.getByText('Campus Library')).toHaveClass('shelf-campus-badge', 'is-available');
+    expect(screen.getByText('University Library')).toHaveClass(
+      'shelf-campus-badge',
+      'is-available',
+    );
     expect(screen.getByText('Available', { selector: '.shelf-available' })).toBeInTheDocument();
   });
 });

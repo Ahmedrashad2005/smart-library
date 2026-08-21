@@ -20,6 +20,11 @@ export class CatalogController {
   @ApiOperation({ summary: 'Browse the catalog, including safe NAWA Campus discovery' })
   @ApiQuery({ name: 'q', required: false, description: 'Book title, ISBN, or author search.' })
   @ApiQuery({ name: 'available', required: false, type: Boolean })
+  @ApiQuery({
+    name: 'facultySlug',
+    required: false,
+    description: 'Filter by an active Delta University faculty technical slug.',
+  })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({
@@ -52,6 +57,7 @@ export class CatalogController {
     query: {
       q?: string;
       categoryId?: string;
+      facultySlug?: string;
       language?: string;
       available?: string;
       campus?: string;

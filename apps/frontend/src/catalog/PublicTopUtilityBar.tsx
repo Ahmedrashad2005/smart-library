@@ -15,47 +15,27 @@ type Props = {
 const copy = {
   ar: {
     language: 'English',
-    favorites: 'المفضلة',
-    account: 'ادخل لحسابك أو سجل الآن',
-    orders: 'طلباتي',
-    services: 'خدمات نَوَى',
-    help: 'المساعدة',
-    branches: 'فروعنا',
-    location: 'حدد موقعك للتوصيل',
+    account: 'تسجيل الدخول إلى حساب الطالب',
     signOut: 'تسجيل الخروج',
-    comingSoon: 'قريبًا',
-    accountMenu: 'قائمة الحساب',
-    accountArea: 'الذهاب إلى حسابي',
-    servicesMenu: 'قائمة خدمات نَوَى',
-    books: 'الكتب',
-    borrowing: 'الاستعارة',
+    accountMenu: 'قائمة حساب الطالب',
+    accountArea: 'الذهاب إلى مساحة العمل',
     myLoans: 'إعاراتي',
     myReservations: 'حجوزاتي',
-    categories: 'الأقسام',
-    campus: 'مكتبة الكلية',
-    utilityNavigation: 'روابط وخدمات نَوَى',
+    faculties: 'كليات جامعة الدلتا',
+    campus: 'المكتبة الجامعية',
+    utilityNavigation: 'روابط مكتبة جامعة الدلتا',
   },
   en: {
     language: 'العربية',
-    favorites: 'Favorites',
-    account: 'Sign in or create an account',
-    orders: 'My loans',
-    services: 'NAWA services',
-    help: 'Help',
-    branches: 'Branches',
-    location: 'Choose your delivery location',
+    account: 'Student account sign in',
     signOut: 'Sign out',
-    comingSoon: 'Coming soon',
-    accountMenu: 'Account menu',
-    accountArea: 'Go to my account',
-    servicesMenu: 'NAWA services menu',
-    books: 'Books',
-    borrowing: 'Borrowing',
+    accountMenu: 'Student account menu',
+    accountArea: 'Go to workspace',
     myLoans: 'My loans',
-    myReservations: 'My Reservations',
-    categories: 'Categories',
-    campus: 'Campus Library',
-    utilityNavigation: 'NAWA utility navigation',
+    myReservations: 'My reservations',
+    faculties: 'Delta University faculties',
+    campus: 'University Library',
+    utilityNavigation: 'Delta University Library links',
   },
 } as const;
 
@@ -66,7 +46,6 @@ export function PublicTopUtilityBar({
   onLanguageChange,
   onSignOut,
 }: Props): JSX.Element {
-  const [servicesOpen, setServicesOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const labels = copy[locale];
   const accountPath =
@@ -75,18 +54,12 @@ export function PublicTopUtilityBar({
       : session?.role === 'LIBRARIAN'
         ? '/librarian/books'
         : '/my-loans';
-  const closeMenus = () => {
-    setServicesOpen(false);
-    setAccountOpen(false);
-  };
   const navigate = (to: string) => {
-    closeMenus();
+    setAccountOpen(false);
     go(to);
-    if (to.includes('#categories'))
-      window.setTimeout(() => document.getElementById('categories')?.scrollIntoView?.(), 0);
   };
   const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
-    if (event.key === 'Escape') closeMenus();
+    if (event.key === 'Escape') setAccountOpen(false);
   };
 
   return (
@@ -121,7 +94,7 @@ export function PublicTopUtilityBar({
                 type="button"
                 role="menuitem"
                 onClick={() => {
-                  closeMenus();
+                  setAccountOpen(false);
                   onSignOut();
                 }}
               >
@@ -132,76 +105,40 @@ export function PublicTopUtilityBar({
           )}
         </div>
 
-        <div className="utility-slot utility-slot--favorites">
-          <UtilityHeaderItem
-            icon="heart"
-            label={labels.favorites}
-            title={labels.comingSoon}
-            suffix={
-              <>
-                <span className="utility-count" aria-label="0">
-                  0
-                </span>
-                <span className="sr-only">— {labels.comingSoon}</span>
-              </>
-            }
-          />
-        </div>
+        {session?.role === 'MEMBER' && (
+          <div className="utility-slot utility-slot--orders">
+            <UtilityHeaderItem
+              icon="history"
+              label={labels.myLoans}
+              onClick={() => navigate('/my-loans')}
+            />
+          </div>
+        )}
 
-        <div className="utility-slot utility-slot--orders">
-          <UtilityHeaderItem
-            icon="delivery"
-            label={labels.orders}
-            onClick={() => navigate('/my-loans')}
-          />
-        </div>
+        {session?.role === 'MEMBER' && (
+          <div className="utility-slot utility-slot--reservations">
+            <UtilityHeaderItem
+              icon="book"
+              label={labels.myReservations}
+              onClick={() => navigate('/my-reservations')}
+            />
+          </div>
+        )}
 
-        <div className="utility-slot utility-slot--services">
+        <div className="utility-slot utility-slot--faculties">
           <UtilityHeaderItem
             icon="categories"
-            label={labels.services}
-            expanded={servicesOpen}
-            controls="utility-services-menu"
-            onClick={() => setServicesOpen((open) => !open)}
-            suffix={<PublicIcon name="chevron" />}
+            label={labels.faculties}
+            onClick={() => navigate('/faculties')}
           />
-          {servicesOpen && (
-            <div
-              id="utility-services-menu"
-              className="utility-popover"
-              role="menu"
-              aria-label={labels.servicesMenu}
-            >
-              <button type="button" role="menuitem" onClick={() => navigate('/books')}>
-                <PublicIcon name="book" />
-                {labels.books}
-              </button>
-              <button type="button" role="menuitem" onClick={() => navigate('/campus')}>
-                <PublicIcon name="book" />
-                {labels.campus}
-              </button>
-              <button type="button" role="menuitem" onClick={() => navigate('/my-loans')}>
-                <PublicIcon name="history" />
-                {labels.borrowing}
-              </button>
-              <button type="button" role="menuitem" onClick={() => navigate('/books#categories')}>
-                <PublicIcon name="categories" />
-                {labels.categories}
-              </button>
-            </div>
-          )}
         </div>
 
-        <div className="utility-slot utility-slot--help">
-          <UtilityHeaderItem icon="help" label={labels.help} title={labels.comingSoon} />
-        </div>
-
-        <div className="utility-slot utility-slot--branches">
-          <UtilityHeaderItem icon="location" label={labels.branches} title={labels.comingSoon} />
-        </div>
-
-        <div className="utility-slot utility-slot--location">
-          <UtilityHeaderItem icon="location" label={labels.location} />
+        <div className="utility-slot utility-slot--campus">
+          <UtilityHeaderItem
+            icon="book"
+            label={labels.campus}
+            onClick={() => navigate('/campus')}
+          />
         </div>
 
         <div className="utility-slot utility-slot--language">

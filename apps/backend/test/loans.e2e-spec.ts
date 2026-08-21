@@ -217,7 +217,7 @@ describe('Phase 4 borrowing lifecycle', () => {
 
   it('permits only one competing borrow of a copy', async () => {
     const borrower = await prisma.user.findUniqueOrThrow({
-      where: { email: 'member13@smart-library.test' },
+      where: { email: 'member9@smart-library.test' },
     });
     const copy = await availableCopy();
     const before = await prisma.book.findUniqueOrThrow({ where: { id: copy.bookId } });
@@ -228,6 +228,10 @@ describe('Phase 4 borrowing lifecycle', () => {
         .send({ memberId: borrower.id, bookCopyId: copy.id });
     const results = await Promise.all([attempt(), attempt()]);
     const success = results.find((result) => result.status === 201);
+    if (success) {
+      createdLoanIds.push(success.body.id as string);
+      touchedCopyIds.add(copy.id);
+    }
     expect(success).toBeDefined();
     expect(results.filter((result) => result.status === 201)).toHaveLength(1);
     expect(results.filter((result) => result.status === 409)).toHaveLength(1);
@@ -348,15 +352,31 @@ describe('Phase 4 borrowing lifecycle', () => {
       name: expect.any(String),
       arabicName: null,
     });
+    expect(mineItem.renewalEligibility).toEqual({
+      canRenew: true,
+      reason: null,
+      used: 0,
+      maximum: 2,
+      remaining: 2,
+    });
     expect(mineItem.member.passwordHash).toBeUndefined();
+    expect(mineItem.member.status).toBeUndefined();
+    expect(mineItem.member.emailVerifiedAt).toBeUndefined();
+    expect(mineItem.member.deletedAt).toBeUndefined();
     expect(mineItem.issuedBy).toBeUndefined();
     expect(mineItem.returnedBy).toBeUndefined();
     expect(mineItem).not.toHaveProperty('auditLogs');
+    const searchedByAuthor = await api()
+      .get(`/api/v1/loans/me?q=${encodeURIComponent(mineItem.bookCopy.book.authors[0].name)}`)
+      .set('Authorization', `Bearer ${member}`);
+    expect(searchedByAuthor.status).toBe(200);
+    expect(searchedByAuthor.body.items.map((item: { id: string }) => item.id)).toContain(own.id);
     const detail = await api()
       .get(`/api/v1/loans/${own.id}`)
       .set('Authorization', `Bearer ${member}`);
     expect(detail.status).toBe(200);
     expect(detail.body.bookCopy.book.authors).toEqual(mineItem.bookCopy.book.authors);
+    expect(detail.body.renewalEligibility).toEqual(mineItem.renewalEligibility);
     await prisma.book.update({ where: { id: copy.bookId }, data: { coverImageUrl: null } });
     const nullCover = await api()
       .get(`/api/v1/loans/${own.id}`)

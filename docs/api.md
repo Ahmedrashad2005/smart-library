@@ -1,5 +1,17 @@
 # NAWA Unified Knowledge Platform API
 
+## Delta University faculties
+
+The public faculty foundation uses safe presentation-only endpoints:
+
+```http
+GET /api/v1/faculties
+GET /api/v1/faculties/:slug
+GET /api/v1/books?facultySlug=artificial-intelligence&page=1&limit=12
+```
+
+Faculty responses contain `id`, technical `slug`, confirmed `nameAr`, nullable confirmed `nameEn`, `displayOrder`, and `bookCount`. They do not expose audit fields or invent official English labels. The books filter preserves the existing catalog response, pagination, sorting, search, availability, and safety mapping while adding only genuinely assigned `faculties` relations. See `docs/delta-university-faculties.md` for the confirmed list and data-safety rules.
+
 ## Phase 5.1 Campus locations and availability
 
 `GET /api/v1/libraries` returns safe summaries of active Campus libraries. `GET /api/v1/libraries/:id` returns the active library → floor → room hierarchy. These reads are public so Book Details can explain where a physical Campus copy lives. They omit timestamps, audit data, copy identifiers, and other administrative fields.

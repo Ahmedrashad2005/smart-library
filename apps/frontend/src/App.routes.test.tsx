@@ -64,8 +64,38 @@ describe('loan routes in the real application router', () => {
         : { items: [], page: 1, totalPages: 0, total: 0 },
     );
     renderAt('/my-loans');
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
     await signIn('MEMBER');
-    expect(await screen.findByRole('heading', { name: 'My loans' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'My Loans' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('navigation', { name: 'Member account navigation' }),
+    ).toBeInTheDocument();
+  });
+
+  it('preserves the safe member loan return path through login', async () => {
+    renderAt('/my-loans?status=overdue&page=2');
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/auth/login');
+    expect(new URLSearchParams(window.location.search).get('returnTo')).toBe(
+      '/my-loans?status=overdue&page=2',
+    );
+  });
+
+  it('does not expose member self-service UI to staff roles', async () => {
+    mockedApi.mockImplementation(async (path: string) =>
+      path === '/auth/login'
+        ? { accessToken: 'token', user: { role: 'LIBRARIAN', fullName: 'Staff' } }
+        : { items: [], page: 1, totalPages: 0, total: 0 },
+    );
+    renderAt('/my-loans');
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+    await signIn('LIBRARIAN');
+    expect(
+      await screen.findByText('My Loans is available to member accounts only.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('navigation', { name: 'Member account navigation' }),
+    ).not.toBeInTheDocument();
   });
   it('opens the return route while preserving the selected-loan query', async () => {
     const loan = {
@@ -167,7 +197,7 @@ describe('loan routes in the real application router', () => {
 
     renderAt('/campus');
 
-    expect(await screen.findByRole('heading', { name: 'College Library' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'University Library' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Campus Route Book' })).toBeInTheDocument();
     expect(window.location.pathname).toBe('/campus');
   });

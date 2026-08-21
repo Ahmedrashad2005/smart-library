@@ -18,20 +18,20 @@ type Props = {
 
 const copy = {
   ar: {
-    heading: 'احجز نسختك من مكتبة الكلية',
-    available: 'متاح في مكتبة الكلية',
+    heading: 'احجز نسختك من المكتبة الجامعية',
+    available: 'متاح في المكتبة الجامعية',
     unavailable: 'غير متاح للحجز حاليًا',
     reserve: 'احجز للاستعارة',
     submitting: 'جارٍ إنشاء الحجز…',
     checkingAccount: 'جارٍ التحقق من الحساب…',
     memberOnly: 'الحجز متاح لحسابات الأعضاء فقط.',
     success: 'تم حجز الكتاب',
-    held: 'احتفظنا لك بنسخة في مكتبة الكلية.',
+    held: 'احتفظنا لك بنسخة في المكتبة الجامعية.',
     pickup: 'مكان الاستلام',
     deadline: 'الحجز متاح حتى',
     copyCode: 'رمز النسخة',
     status: 'حالة الحجز',
-    browse: 'العودة إلى مكتبة الكلية',
+    browse: 'العودة إلى المكتبة الجامعية',
     duplicate: 'لديك حجز نشط لهذا الكتاب بالفعل.',
     noCopy: 'لا توجد نسخة متاحة للحجز حاليًا.',
     ineligible: 'حسابك غير مؤهل لإنشاء حجز حاليًا.',
@@ -39,20 +39,20 @@ const copy = {
     unexpected: 'تعذر إنشاء الحجز الآن. حاول مرة أخرى.',
   },
   en: {
-    heading: 'Reserve a College Library copy',
-    available: 'Available at the College Library',
+    heading: 'Reserve a University Library copy',
+    available: 'Available at the University Library',
     unavailable: 'Currently unavailable for reservation',
     reserve: 'Reserve for pickup',
     submitting: 'Creating reservation…',
     checkingAccount: 'Checking your account…',
     memberOnly: 'Reservations are available to member accounts only.',
     success: 'Book reserved',
-    held: 'We are holding a copy for you at the College Library.',
+    held: 'We are holding a copy for you at the University Library.',
     pickup: 'Pickup location',
     deadline: 'Reservation available until',
     copyCode: 'Copy code',
     status: 'Reservation status',
-    browse: 'Back to Campus Library',
+    browse: 'Back to the University Library',
     duplicate: 'You already have an active reservation for this book.',
     noCopy: 'No copy is currently available to reserve.',
     ineligible: 'Your account is not currently eligible to create a reservation.',
@@ -141,7 +141,9 @@ export function ReservationAction({
           ✓
         </div>
         <div>
-          <p className="reservation-result__eyebrow">NAWA Campus</p>
+          <p className="reservation-result__eyebrow">
+            {locale === 'ar' ? 'مكتبة جامعة الدلتا' : 'Delta University Library'}
+          </p>
           <h2 id="reservation-success-title">{labels.success}</h2>
           <h3 dir="auto">
             {result.book.titleAr && locale === 'ar'
@@ -187,7 +189,9 @@ export function ReservationAction({
   return (
     <section className="reservation-action" aria-labelledby="reservation-action-title">
       <div>
-        <p className="reservation-action__eyebrow">NAWA Campus</p>
+        <p className="reservation-action__eyebrow">
+          {locale === 'ar' ? 'مكتبة جامعة الدلتا' : 'Delta University Library'}
+        </p>
         <h2 id="reservation-action-title">{labels.heading}</h2>
         <p className={isAvailable ? 'is-available' : 'is-unavailable'}>
           {isAvailable ? labels.available : labels.unavailable}

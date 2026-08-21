@@ -343,11 +343,26 @@ model Book {
   publisher             Publisher?    @relation(fields: [publisherId], references: [id], onDelete: Restrict)
   category              Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   authors               BookAuthor[]
+  faculties             BookFaculty[]
   copies                BookCopy[]
   reservations          Reservation[]
 
   @@index([isArchived, deletedAt, title])
   @@index([categoryId, language])
+}
+
+model Faculty {
+  id           String        @id @default(uuid()) @db.Uuid
+  slug         String        @unique
+  nameAr       String        @unique
+  nameEn       String?
+  displayOrder Int
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  books        BookFaculty[]
+
+  @@index([isActive, displayOrder])
 }
 
 model BookAuthor {
@@ -359,6 +374,17 @@ model BookAuthor {
 
   @@id([bookId, authorId])
   @@index([authorId])
+}
+
+model BookFaculty {
+  bookId     String   @db.Uuid
+  facultyId  String   @db.Uuid
+  assignedAt DateTime @default(now())
+  book       Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  faculty    Faculty  @relation(fields: [facultyId], references: [id], onDelete: Restrict)
+
+  @@id([bookId, facultyId])
+  @@index([facultyId])
 }
 
 model BookCopy {

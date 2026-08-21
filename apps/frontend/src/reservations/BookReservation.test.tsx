@@ -110,7 +110,7 @@ describe('student reservation on the real Book Details page', () => {
   it('shows an Arabic Reserve CTA beside real Campus availability', async () => {
     renderPage();
     expect(await screen.findByRole('button', { name: 'احجز للاستعارة' })).toBeEnabled();
-    expect(screen.getByText('متاح في مكتبة الكلية')).toBeVisible();
+    expect(screen.getByText('متاح في المكتبة الجامعية')).toBeVisible();
     expect(screen.getByText('الدور الثالث — غرفة 315')).toBeVisible();
   });
 
@@ -147,7 +147,7 @@ describe('student reservation on the real Book Details page', () => {
       timeStyle: 'short',
     }).format(new Date('2026-08-14T10:00:00.000Z'));
     expect(screen.getByText(expectedDeadline)).toBeVisible();
-    await user.click(screen.getByRole('button', { name: 'العودة إلى مكتبة الكلية' }));
+    await user.click(screen.getByRole('button', { name: 'العودة إلى المكتبة الجامعية' }));
     expect(go).toHaveBeenCalledWith('/campus');
   });
 

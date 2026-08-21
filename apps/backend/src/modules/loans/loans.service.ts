@@ -19,7 +19,17 @@ import { LoanPolicyService } from './loan-policy.service';
 import { BorrowLoanDto, LoanQueryDto, ReturnLoanDto } from './loan.dto';
 
 const loanInclude = {
-  member: { select: { id: true, fullName: true, email: true, membershipNumber: true } },
+  member: {
+    select: {
+      id: true,
+      fullName: true,
+      email: true,
+      membershipNumber: true,
+      status: true,
+      emailVerifiedAt: true,
+      deletedAt: true,
+    },
+  },
   bookCopy: {
     include: {
       book: {
@@ -267,22 +277,42 @@ export class LoansService {
       filters.push({ returnedAt: null, dueAt: { gte: new Date() } });
     else if (query.status === LoanStatus.OVERDUE)
       filters.push({ returnedAt: null, dueAt: { lt: new Date() } });
+    const searchFilters: Prisma.LoanWhereInput[] = query.q
+      ? [
+          ...(!memberId
+            ? [
+                { member: { fullName: { contains: query.q, mode: 'insensitive' as const } } },
+                { member: { email: { contains: query.q, mode: 'insensitive' as const } } },
+                { bookCopy: { barcode: { contains: query.q, mode: 'insensitive' as const } } },
+              ]
+            : []),
+          { bookCopy: { copyCode: { contains: query.q, mode: 'insensitive' } } },
+          { bookCopy: { book: { title: { contains: query.q, mode: 'insensitive' } } } },
+          { bookCopy: { book: { titleAr: { contains: query.q, mode: 'insensitive' } } } },
+          {
+            bookCopy: {
+              book: {
+                authors: {
+                  some: {
+                    author: {
+                      OR: [
+                        { name: { contains: query.q, mode: 'insensitive' } },
+                        { nameAr: { contains: query.q, mode: 'insensitive' } },
+                      ],
+                    },
+                  },
+                },
+              },
+            },
+          },
+        ]
+      : [];
     const where: Prisma.LoanWhereInput = {
       ...(memberId ? { memberId } : {}),
       ...(query.memberId ? { memberId: query.memberId } : {}),
       ...(query.bookId ? { bookCopy: { bookId: query.bookId } } : {}),
       ...(query.copyId ? { bookCopyId: query.copyId } : {}),
-      ...(query.q
-        ? {
-            OR: [
-              { member: { fullName: { contains: query.q, mode: 'insensitive' } } },
-              { member: { email: { contains: query.q, mode: 'insensitive' } } },
-              { bookCopy: { copyCode: { contains: query.q, mode: 'insensitive' } } },
-              { bookCopy: { barcode: { contains: query.q, mode: 'insensitive' } } },
-              { bookCopy: { book: { title: { contains: query.q, mode: 'insensitive' } } } },
-            ],
-          }
-        : {}),
+      ...(searchFilters.length ? { OR: searchFilters } : {}),
       ...(filters.length ? { AND: filters } : {}),
     };
     const [items, total] = await this.prisma.$transaction([
@@ -324,10 +354,34 @@ export class LoansService {
     });
   }
   private present(loan: LoanRecord, includeStaff = true) {
-    const { issuedBy, returnedBy, ...safeLoan } = loan;
+    const { issuedBy, returnedBy, member, ...safeLoan } = loan;
+    const status = this.effectiveStatus(loan);
+    const renewalReason =
+      status === LoanStatus.RETURNED
+        ? 'RETURNED'
+        : status === LoanStatus.OVERDUE
+          ? 'OVERDUE'
+          : member.status !== UserStatus.ACTIVE || !member.emailVerifiedAt || member.deletedAt
+            ? 'MEMBER_INELIGIBLE'
+            : loan.renewedCount >= this.policy.maxRenewals
+              ? 'LIMIT_REACHED'
+              : null;
     return {
       ...safeLoan,
-      status: this.effectiveStatus(loan),
+      status,
+      member: {
+        id: member.id,
+        fullName: member.fullName,
+        email: member.email,
+        membershipNumber: member.membershipNumber,
+      },
+      renewalEligibility: {
+        canRenew: renewalReason === null,
+        reason: renewalReason,
+        used: loan.renewedCount,
+        maximum: this.policy.maxRenewals,
+        remaining: Math.max(0, this.policy.maxRenewals - loan.renewedCount),
+      },
       ...(includeStaff ? { issuedBy, returnedBy } : {}),
       bookCopy: {
         ...loan.bookCopy,

@@ -119,9 +119,9 @@ describe('CategoryStrip', () => {
     );
 
     const campus = screen.getByRole('button', {
-      name: 'تصفح حسب التصنيف: كتب مكتبة الكلية',
+      name: 'تصفح حسب التصنيف: كتب المكتبة الجامعية',
     });
-    expect(campus).toHaveAttribute('title', 'كتب مكتبة الكلية');
+    expect(campus).toHaveAttribute('title', 'كتب المكتبة الجامعية');
     expect(
       screen.getByRole('button', { name: 'تصفح حسب التصنيف: الأمن السيبراني' }),
     ).toHaveAttribute('title', 'الأمن السيبراني');

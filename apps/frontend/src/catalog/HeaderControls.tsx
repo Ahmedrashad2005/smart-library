@@ -7,15 +7,33 @@ type BrandProps = {
   onHome: () => void;
 };
 
-export function NawaBrandLogo({ locale, onHome }: BrandProps): JSX.Element {
+export function DeltaUniversityBrand({ locale, onHome }: BrandProps): JSX.Element {
   return (
     <button
       type="button"
-      className="nawa-brand"
+      className="nawa-brand delta-university-brand"
       onClick={onHome}
-      aria-label={locale === 'ar' ? 'العودة إلى رئيسية نَوَى' : 'Go to the NAWA home page'}
+      aria-label={
+        locale === 'ar'
+          ? 'العودة إلى رئيسية مكتبة جامعة الدلتا'
+          : 'Go to the Delta University Library home page'
+      }
     >
-      <img src="/brand/nawa-logo.png" alt="NAWA نَوَى brand logo" />
+      <img
+        src="/branding/delta-university/delta-university-logo.png"
+        alt={locale === 'ar' ? 'شعار جامعة الدلتا' : 'Delta University logo'}
+        onError={(event) => {
+          event.currentTarget.hidden = true;
+        }}
+      />
+      <span>
+        <strong>{locale === 'ar' ? 'مكتبة جامعة الدلتا' : 'Delta University Library'}</strong>
+        <small>
+          {locale === 'ar'
+            ? 'جامعة الدلتا للعلوم والتكنولوجيا'
+            : 'Delta University for Science and Technology'}
+        </small>
+      </span>
     </button>
   );
 }
@@ -28,11 +46,11 @@ type SearchProps = {
 };
 
 export function HeaderSearch({ locale, value, onChange, onSubmit }: SearchProps): JSX.Element {
-  const label = locale === 'ar' ? 'البحث في مكتبة نَوَى' : 'Search the NAWA library';
+  const label = locale === 'ar' ? 'البحث في مكتبة جامعة الدلتا' : 'Search Delta University Library';
   const placeholder =
     locale === 'ar'
-      ? 'ابحث عن كتاب، تقنية، أداة أو موضوع...'
-      : 'Search for a book, technology, tool, or topic...';
+      ? 'ابحث عن كتاب، مؤلف، تخصص أو موضوع...'
+      : 'Search by book, author, discipline, or topic...';
 
   return (
     <form className="header-search" role="search" onSubmit={onSubmit}>

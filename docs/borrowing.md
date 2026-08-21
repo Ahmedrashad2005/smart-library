@@ -7,7 +7,7 @@ Loans are issued, returned, and renewed by the API under `/api/v1/loans`. Staff 
 | `POST /loans/borrow`     | LIBRARIAN, ADMIN                    | `memberId` and one of `bookCopyId`, `copyCode`, `barcode`, or `qrCodeValue` are required.                             |
 | `POST /loans/:id/return` | LIBRARIAN, ADMIN                    | Requires a valid copy condition; damaged returns remain unavailable.                                                  |
 | `POST /loans/:id/renew`  | MEMBER (own loan), LIBRARIAN, ADMIN | Active, eligible loans only; two-renewal maximum.                                                                     |
-| `GET /loans/me`          | MEMBER                              | Supports `status`, `page`, and `limit`; always scoped to the caller.                                                  |
+| `GET /loans/me`          | MEMBER                              | Supports localized title/author/copy-code `q`, `status`, `page`, and `limit`; always scoped to the caller.            |
 | `GET /loans`             | LIBRARIAN, ADMIN                    | Supports `q`, member/book/copy IDs, status, borrowed/due date ranges, pagination.                                     |
 | `GET /loans/:id`         | MEMBER (own loan), LIBRARIAN, ADMIN | Returns safe member, book, copy, renewal, and return details. Staff responses include issuer/returner display fields. |
 
@@ -24,6 +24,12 @@ Staff use `/librarian/loans`, `/librarian/loans/borrow`, `/librarian/loans/:id`,
 Return processing confirms an allowed copy condition and optional note. Loan lists/details use the backend-provided effective status; browser date helpers are presentation-only. Reservations, fines, payments, notifications, recommendations, and background jobs remain outside this phase.
 
 Member loan lists and details use the shared safe loan response, including a nullable book cover and safe bilingual author display fields. The UI renders a compact initial placeholder when a cover is absent.
+
+## Phase 5.3.3 member loan experience
+
+`/my-loans` and `/my-loans/:id` now use book-oriented bilingual cards/details rather than the staff circulation table. The list offers real server-side title, Arabic-title, author, and copy-code search; Active, Overdue, Returned, and All filters; URL pagination; cover/fallback presentation; due-date context; and shared local navigation with My Reservations. Member pages do not display staff identity, barcode/QR data, another member's identity, internal UUIDs, or unsupported fine information.
+
+The safe loan response includes `renewalEligibility` with `canRenew`, a nullable `reason` (`RETURNED`, `OVERDUE`, `MEMBER_INELIGIBLE`, or `LIMIT_REACHED`), `used`, `maximum`, and `remaining`. These values are calculated from the existing `LoanPolicyService`; no renewal rule changed. The frontend confirms an eligible renewal in an accessible dialog, prevents repeated pending submissions, renders the committed response, and refetches owned detail after a lifecycle conflict rather than guessing the winner.
 
 ## Final Phase 4 verification
 

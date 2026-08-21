@@ -5,6 +5,7 @@ import { BottomServiceStrip } from './BottomServiceStrip';
 import { BookCard } from './BookCard';
 import { CategoryStrip } from './CategoryStrip';
 import { HeroBanner } from './HeroBanner';
+import { FacultiesSection } from '../faculties/FacultiesSection';
 import {
   publicCategoryName,
   type PublicBook,
@@ -30,8 +31,8 @@ const copy = {
     availableNow: 'Available now',
     newBooks: 'New releases',
     mostRead: 'Most read',
-    campus: 'From your Campus Library',
-    campusDescription: 'Explore books currently held in the Campus Library.',
+    campus: 'From Delta University Library',
+    campusDescription: 'Explore books currently held in the University Library.',
     fullCatalog: 'Full catalog',
     results: 'books found',
     filters: 'Catalog filters',
@@ -67,8 +68,8 @@ const copy = {
     availableNow: 'متاح الآن',
     newBooks: 'إصدارات جديدة',
     mostRead: 'الأكثر قراءة',
-    campus: 'من مكتبة كليتك',
-    campusDescription: 'اكتشف الكتب الموجودة في مكتبة الكلية.',
+    campus: 'من مكتبة جامعة الدلتا',
+    campusDescription: 'اكتشف الكتب الموجودة في المكتبة الجامعية.',
     fullCatalog: 'الفهرس الكامل',
     results: 'كتاب',
     filters: 'مرشحات الفهرس',
@@ -264,8 +265,10 @@ export function PublicCatalog({
           }
           document.getElementById('full-catalog-heading')?.scrollIntoView({ block: 'start' });
         }}
-        onCampus={() => go('/campus')}
+        onFaculties={() => go('/faculties')}
       />
+
+      {!showFullCatalog && <FacultiesSection locale={locale} go={go} />}
 
       {discoveryError ? (
         <CatalogError
