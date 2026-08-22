@@ -496,7 +496,7 @@ function AssistantBookExplanationCard({
   go,
 }: {
   result: AssistantResponse;
-  book: PublicBook & { reason?: string };
+  book: PublicBook & { reason?: string; semanticReason?: string };
   locale: PublicLocale;
   labels: (typeof copy)[PublicLocale];
   submit: (value: string) => void;
@@ -637,7 +637,7 @@ function AssistantBookCard({
   labels,
   go,
 }: {
-  book: PublicBook & { reason?: string };
+  book: PublicBook & { reason?: string; semanticReason?: string };
   locale: PublicLocale;
   labels: (typeof copy)[PublicLocale];
   go: (to: string) => void;
@@ -665,7 +665,9 @@ function AssistantBookCard({
       <div>
         <strong dir="auto">{title}</strong>
         <small dir="auto">{author}</small>
-        {book.reason && <p>{book.reason}</p>}
+        {(book.semanticReason || book.reason) && (
+          <p dir="auto">{book.semanticReason || book.reason}</p>
+        )}
         <span className={available ? 'is-available' : 'is-unavailable'}>
           {available ? labels.available : labels.unavailable}
         </span>

@@ -17,6 +17,9 @@ from .assistant import (
     BookExplanationGenerator,
     BookExplanationRequest,
     BookExplanationResponse,
+    CatalogSelectionRequest,
+    CatalogSelectionResponse,
+    CatalogSelector,
 )
 from .recommendations import GeminiAdapter, RankRequest, RankResponse, RecommendationRanker
 
@@ -214,6 +217,41 @@ async def explain_catalog_book(request: BookExplanationRequest) -> BookExplanati
     logger.info(
         "Assistant explained book history=%s latency_ms=%s",
         len(request.history),
+        round((monotonic() - started) * 1000),
+    )
+    return result
+
+
+@app.post("/assistant/select-catalog", response_model=CatalogSelectionResponse)
+async def select_catalog_books(request: CatalogSelectionRequest) -> CatalogSelectionResponse:
+    """Select only semantically relevant IDs from a bounded real catalog projection."""
+    if not assistant_ai_enabled():
+        raise HTTPException(status_code=503, detail="AI catalog selection is disabled")
+    api_key = os.getenv("GEMINI_API_KEY", "").strip()
+    if not api_key:
+        raise HTTPException(status_code=503, detail="Gemini is not configured")
+    started = monotonic()
+    try:
+        result = await CatalogSelector(
+            AssistantGeminiAdapter(api_key=api_key, model=gemini_model())
+        ).select(request)
+    except AssistantPipelineError as error:
+        log_assistant_failure(error)
+        status = 504 if error.code == "TIMEOUT" else 502
+        raise HTTPException(status_code=status, detail=error.code) from error
+    except Exception as error:
+        logger.warning(
+            "Gemini catalog selection failed model=%s exception=%s message=%s",
+            gemini_model(),
+            type(error).__name__,
+            sanitized_error_message(error),
+        )
+        raise HTTPException(status_code=502, detail="Catalog selection failed") from error
+    logger.info(
+        "Assistant catalog selection candidates=%s results=%s locale=%s latency_ms=%s",
+        len(request.books),
+        len(result.matches),
+        request.locale,
         round((monotonic() - started) * 1000),
     )
     return result

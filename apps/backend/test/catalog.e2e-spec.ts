@@ -5,10 +5,12 @@ import * as cookieParser from 'cookie-parser';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/database/prisma.service';
+import { CatalogService } from '../src/modules/catalog/catalog.service';
 
 describe('Phase 3 catalog and inventory', () => {
   let app: INestApplication;
   let prisma: PrismaService;
+  let catalog: CatalogService;
   let adminToken = '';
   let librarianToken = '';
   let memberToken = '';
@@ -26,6 +28,7 @@ describe('Phase 3 catalog and inventory', () => {
     app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
     await app.init();
     prisma = app.get(PrismaService);
+    catalog = app.get(CatalogService);
     adminToken = await login('admin@smart-library.test');
     librarianToken = await login('librarian1@smart-library.test');
     memberToken = await login('member1@smart-library.test');
@@ -45,6 +48,61 @@ describe('Phase 3 catalog and inventory', () => {
           .send({ nameEn: 'Denied', nameAr: 'ممنوع', slug: `${suffix}-denied` })
       ).status,
     ).toBe(403);
+  });
+
+  it('builds bounded compact semantic candidates and excludes archived books', async () => {
+    const category = (await api().get('/api/v1/categories')).body[0];
+    const author = (await api().get('/api/v1/authors')).body[0];
+    const publisher = (await api().get('/api/v1/publishers')).body[0];
+    const created = await api()
+      .post('/api/v1/books')
+      .set('Authorization', `Bearer ${librarianToken}`)
+      .send({
+        title: `000 Semantic Candidate ${suffix}`,
+        subtitle: 'A verified catalog subject subtitle',
+        slug: `${suffix}-semantic-candidate`,
+        ddc: '005.1',
+        categoryId: category.id,
+        publisherId: publisher.id,
+        authorIds: [author.id],
+        description: 'D'.repeat(900),
+      });
+    expect(created.status).toBe(201);
+    await prisma.book.update({
+      where: { id: created.body.id },
+      data: { subtitle: 'A verified catalog subject subtitle' },
+    });
+    const candidates = await catalog.semanticCatalogCandidates(75);
+    const candidate = candidates.find(({ id }) => id === created.body.id);
+    expect(candidate).toMatchObject({
+      id: created.body.id,
+      title: `000 Semantic Candidate ${suffix}`,
+      subtitle: 'A verified catalog subject subtitle',
+      authors: expect.any(Array),
+      categories: expect.any(Array),
+      publisher: publisher.nameAr || publisher.name,
+      classification: '005.1',
+      faculties: expect.any(Array),
+    });
+    expect(candidate?.description).toHaveLength(420);
+    expect(await catalog.semanticCatalogCandidates(2)).toHaveLength(2);
+    expect(
+      (
+        await api()
+          .post(`/api/v1/books/${created.body.id}/archive`)
+          .set('Authorization', `Bearer ${librarianToken}`)
+      ).status,
+    ).toBe(201);
+    expect(
+      (await catalog.semanticCatalogCandidates(75)).some(({ id }) => id === created.body.id),
+    ).toBe(false);
+    expect(
+      (
+        await api()
+          .post(`/api/v1/books/${created.body.id}/restore`)
+          .set('Authorization', `Bearer ${librarianToken}`)
+      ).status,
+    ).toBe(201);
   });
 
   it('creates, rejects duplicates, archives and restores master data with audit records', async () => {

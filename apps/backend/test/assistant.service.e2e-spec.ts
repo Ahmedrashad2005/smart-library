@@ -37,9 +37,16 @@ describe('AssistantService read-only orchestration', () => {
   const catalog = {
     listBooks: jest.fn(),
     book: jest.fn(),
+    semanticCatalogCandidates: jest.fn(),
+    semanticCatalogBooks: jest.fn(),
   };
   const recommendations = { mine: jest.fn() };
-  const client = { interpret: jest.fn(), explainBook: jest.fn(), explainAcademic: jest.fn() };
+  const client = {
+    interpret: jest.fn(),
+    explainBook: jest.fn(),
+    explainAcademic: jest.fn(),
+    selectCatalog: jest.fn(),
+  };
   const service = new AssistantService(
     prisma as never,
     catalog as never,
@@ -54,6 +61,39 @@ describe('AssistantService read-only orchestration', () => {
     process.env.ASSISTANT_AI_ENABLED = 'false';
     catalog.listBooks.mockResolvedValue({ items: [book], total: 1 });
     catalog.book.mockResolvedValue(book);
+    catalog.semanticCatalogCandidates.mockResolvedValue([
+      {
+        id: 'book-1',
+        title: 'Big Java',
+        authors: ['Cay Horstmann'],
+        categories: ['Programming'],
+        faculties: [],
+      },
+      {
+        id: 'book-2',
+        title: 'Data and Computer Communications',
+        authors: ['William Stallings'],
+        categories: ['Communications'],
+        description: 'D'.repeat(420),
+        faculties: [],
+      },
+    ]);
+    catalog.semanticCatalogBooks.mockImplementation(async (ids: string[]) =>
+      ids.map((id) =>
+        id === 'book-1'
+          ? book
+          : { ...book, id: 'book-2', slug: 'data-communications', title: 'Data Communications' },
+      ),
+    );
+    client.selectCatalog.mockResolvedValue({
+      matches: [
+        {
+          bookId: 'book-2',
+          relevance: 'DIRECT',
+          reason: 'مرتبط باتصالات البيانات والشبكات.',
+        },
+      ],
+    });
     recommendations.mine.mockResolvedValue({
       mode: 'personalized',
       items: [{ book, reason: 'مناسب لاهتمامك بالبرمجة.' }],
@@ -87,6 +127,206 @@ describe('AssistantService read-only orchestration', () => {
     await service.message({ message: 'عايز كتاب Java', locale: 'ar' });
     expect(catalog.listBooks).toHaveBeenCalledWith(
       expect.objectContaining({ q: expect.stringContaining('Java'), limit: '4' }),
+    );
+  });
+
+  it.each([
+    ['اي الكتب اللي بتتكلم عن الشبكات', 'ar'],
+    ['books about computer networks', 'en'],
+    ['عايز كتاب عن wireless communication', 'ar'],
+  ] as const)('uses one grounded semantic catalog selection for %s', async (message, locale) => {
+    process.env.ASSISTANT_AI_ENABLED = 'true';
+    client.interpret.mockResolvedValue({ intent: 'SEARCH_BOOKS', query: message });
+    catalog.listBooks.mockResolvedValue({ items: [], total: 0 });
+    const result = await service.message({ message, locale });
+    expect(result).toMatchObject({
+      type: 'BOOK_SEARCH_RESULTS',
+      searchMode: 'semantic_catalog',
+      books: [
+        expect.objectContaining({
+          id: 'book-2',
+          semanticReason: 'مرتبط باتصالات البيانات والشبكات.',
+        }),
+      ],
+    });
+    expect(client.selectCatalog).toHaveBeenCalledTimes(1);
+    expect(catalog.semanticCatalogBooks).toHaveBeenCalledWith(['book-2']);
+  });
+
+  it('rejects invented and duplicate IDs, caps matches, and reloads authoritative books', async () => {
+    process.env.ASSISTANT_AI_ENABLED = 'true';
+    client.interpret.mockResolvedValue({ intent: 'SEARCH_BOOKS', query: 'networks' });
+    catalog.listBooks.mockResolvedValue({ items: [], total: 0 });
+    const candidates = Array.from({ length: 6 }, (_, index) => ({
+      id: `book-${index + 1}`,
+      title: `Real Book ${index + 1}`,
+      authors: [],
+      categories: ['Networks'],
+      faculties: [],
+    }));
+    catalog.semanticCatalogCandidates.mockResolvedValue(candidates);
+    catalog.semanticCatalogBooks.mockImplementation(async (ids: string[]) =>
+      ids.map((id) => ({ ...book, id, slug: id, title: `Authoritative ${id}` })),
+    );
+    client.selectCatalog.mockResolvedValue({
+      matches: [
+        { bookId: 'invented', relevance: 'DIRECT', reason: 'Invalid.' },
+        { bookId: 'book-1', relevance: 'DIRECT', reason: 'First.' },
+        { bookId: 'book-1', relevance: 'DIRECT', reason: 'Duplicate.' },
+        ...candidates.slice(1).map(({ id }) => ({
+          bookId: id,
+          relevance: 'DIRECT',
+          reason: `Reason ${id}.`,
+        })),
+      ],
+    });
+    const result = await service.message({ message: 'books about networks', locale: 'en' });
+    expect(catalog.semanticCatalogBooks).toHaveBeenCalledWith([
+      'book-1',
+      'book-2',
+      'book-3',
+      'book-4',
+    ]);
+    expect(result.books).toHaveLength(4);
+    expect(JSON.stringify(result.books)).not.toContain('invented');
+    expect(result.books?.[0]).toMatchObject({ title: 'Authoritative book-1' });
+  });
+
+  it('keeps only DIRECT and FOUNDATIONAL books for a Backend learning goal without quota padding', async () => {
+    process.env.ASSISTANT_AI_ENABLED = 'true';
+    const message = 'عايز كتب تساعدني أبقى Backend developer';
+    client.interpret.mockResolvedValue({ intent: 'SEARCH_BOOKS', query: message });
+    catalog.listBooks.mockResolvedValue({ items: [], total: 0 });
+    const candidates = [
+      { id: 'programming', title: 'Programming Language' },
+      { id: 'operating-system', title: 'Operating System Concepts' },
+      { id: 'wireless', title: 'Wireless Communications' },
+      { id: 'fiber', title: 'Optical Fiber Communication' },
+    ].map((candidate) => ({
+      ...candidate,
+      authors: [],
+      categories: [],
+      faculties: [],
+    }));
+    catalog.semanticCatalogCandidates.mockResolvedValue(candidates);
+    catalog.semanticCatalogBooks.mockImplementation(async (ids: string[]) =>
+      ids.map((id) => ({
+        ...book,
+        id,
+        slug: id,
+        title: candidates.find((candidate) => candidate.id === id)?.title ?? id,
+      })),
+    );
+    client.selectCatalog.mockResolvedValue({
+      matches: [
+        {
+          bookId: 'programming',
+          relevance: 'DIRECT',
+          reason: 'يعالج البرمجة مباشرة.',
+        },
+        {
+          bookId: 'operating-system',
+          relevance: 'FOUNDATIONAL',
+          reason: 'أساس واضح لفهم تشغيل الخوادم.',
+        },
+        { bookId: 'wireless', relevance: 'WEAK', reason: 'صلة عامة بالحوسبة.' },
+        { bookId: 'fiber', relevance: 'WEAK', reason: 'صلة عامة بالشبكات.' },
+      ],
+    });
+
+    const result = await service.message({
+      message,
+      locale: 'ar',
+      history: [
+        { role: 'assistant', content: 'اهتمامات سابقة في الاتصالات', bookIds: ['wireless'] },
+      ],
+    });
+
+    expect(result.books).toEqual([
+      expect.objectContaining({ id: 'programming' }),
+      expect.objectContaining({ id: 'operating-system' }),
+    ]);
+    expect(JSON.stringify(result.books)).not.toMatch(/Wireless Communications|Optical Fiber/);
+    expect(result.message).toBe('لقيت كتابين في الفهرس الحالي مرتبطين بشكل واضح بالطلب ده.');
+    expect(catalog.semanticCatalogBooks).toHaveBeenCalledWith(['programming', 'operating-system']);
+    const selectionRequest = client.selectCatalog.mock.calls[0]![0];
+    expect(selectionRequest).not.toHaveProperty('history');
+    expect(JSON.stringify(selectionRequest)).not.toContain('اهتمامات سابقة');
+    expect(recommendations.mine).not.toHaveBeenCalled();
+    expect(prisma.loan.findMany).not.toHaveBeenCalled();
+    expect(prisma.reservation.findMany).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['عايز كتب عن wireless communication', 'wireless', 'Wireless Communications'],
+    ['عايز كتب عن fiber optics', 'fiber', 'Optical Fiber Communication'],
+  ] as const)(
+    'preserves a DIRECT match when the current request is %s',
+    async (message, id, title) => {
+      process.env.ASSISTANT_AI_ENABLED = 'true';
+      client.interpret.mockResolvedValue({ intent: 'SEARCH_BOOKS', query: message });
+      catalog.listBooks.mockResolvedValue({ items: [], total: 0 });
+      catalog.semanticCatalogCandidates.mockResolvedValue([
+        { id, title, authors: [], categories: ['Communications'], faculties: [] },
+      ]);
+      catalog.semanticCatalogBooks.mockResolvedValue([{ ...book, id, slug: id, title }]);
+      client.selectCatalog.mockResolvedValue({
+        matches: [
+          {
+            bookId: id,
+            relevance: 'DIRECT',
+            reason: 'يتناول الموضوع المطلوب مباشرة.',
+          },
+        ],
+      });
+
+      const result = await service.message({ message, locale: 'ar' });
+
+      expect(result.books).toEqual([expect.objectContaining({ id, title })]);
+    },
+  );
+
+  it('accepts zero semantic matches and returns the honest no-result response', async () => {
+    process.env.ASSISTANT_AI_ENABLED = 'true';
+    client.interpret.mockResolvedValue({ intent: 'SEARCH_BOOKS', query: 'missing subject' });
+    catalog.listBooks.mockResolvedValue({ items: [], total: 0 });
+    client.selectCatalog.mockResolvedValue({ matches: [] });
+    const result = await service.message({ message: 'موضوع مش موجود خالص', locale: 'ar' });
+    expect(result).toMatchObject({ searchMode: 'semantic_catalog', books: [] });
+    expect(result.message).toContain('ملقتش حاليًا كتاب مناسب');
+  });
+
+  it('preserves exact title lookup without a semantic Gemini call', async () => {
+    process.env.ASSISTANT_AI_ENABLED = 'true';
+    client.interpret.mockResolvedValue({ intent: 'SEARCH_BOOKS', query: 'Big Java' });
+    const result = await service.message({ message: 'Big Java', locale: 'en' });
+    expect(result).toMatchObject({ searchMode: 'exact_lookup' });
+    expect(client.selectCatalog).not.toHaveBeenCalled();
+    expect(catalog.semanticCatalogCandidates).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the literal catalog result when semantic selection fails', async () => {
+    process.env.ASSISTANT_AI_ENABLED = 'true';
+    client.interpret.mockResolvedValue({ intent: 'SEARCH_BOOKS', query: 'networks' });
+    client.selectCatalog.mockRejectedValue(new Error('Gemini unavailable'));
+    const result = await service.message({ message: 'كتب عن الشبكات', locale: 'ar' });
+    expect(result).toMatchObject({ searchMode: 'literal_fallback', books: [book] });
+  });
+
+  it('sends a bounded compact catalog with no history, PII, copy IDs, or overlong descriptions', async () => {
+    process.env.ASSISTANT_AI_ENABLED = 'true';
+    client.interpret.mockResolvedValue({ intent: 'SEARCH_BOOKS', query: 'networks' });
+    catalog.listBooks.mockResolvedValue({ items: [], total: 0 });
+    await service.message({
+      message: 'كتب شبكات لـ student@example.test 01012345678 Bearer secret.token.value',
+      locale: 'ar',
+      history: [{ role: 'assistant', content: 'private history', bookIds: ['book-1'] }],
+    });
+    const payload = client.selectCatalog.mock.calls[0]![0];
+    expect(payload.books).toHaveLength(2);
+    expect(payload.books[1].description).toHaveLength(420);
+    expect(JSON.stringify(payload)).not.toMatch(
+      /student@example|01012345678|secret\.token|private history|copyCode|bookCopy/i,
     );
   });
 

@@ -254,6 +254,17 @@ Phase 5.3.3 is a member presentation and safe-response refinement only. It adds 
 - [x] Add real bounded follow-up actions, contextual loading/error wording, and focused Python, NestJS, and React tests.
 - [x] Complete full repository, rebuilt Docker/runtime, live four-prompt, and 1440/900/390 visual verification.
 
+### Gemini Catalog Selection — implementation complete, final verification pending
+
+- [x] Preserve exact-title lookup and keep `SEARCH_BOOKS` separate from personalized `RECOMMEND_BOOKS`.
+- [x] Add one bounded semantic selection call over compact real active-catalog metadata without query expansion or vector infrastructure.
+- [x] Validate unique supplied IDs in Python and NestJS, cap results, accept honest zero matches, and reload authoritative Book presentation from PostgreSQL.
+- [x] Preserve literal catalog search as the safe Gemini failure fallback and expose no technical error details.
+- [x] Render localized semantic relevance reasons in the existing compact Assistant Book cards without redesigning the widget.
+- [x] Add focused Python, backend orchestration, database-backed candidate, and rendered frontend tests with mocked Gemini.
+- [x] Complete full checks, rebuilt runtime, seven-query live smoke verification, and development-data integrity verification.
+- [x] Tighten semantic catalog relevance with current-query dominance, explicit `DIRECT | FOUNDATIONAL | WEAK` classification, weak-match rejection, honest sub-limit result counts, richer safe metadata, and learning-goal regression coverage without query expansion or personalization leakage.
+
 ### Later Phase 5 work — Not started
 
 - [ ] Phase 5.3.4: continue only from separately approved Member Area scope; do not infer pickup, notification, fine/payment, or broader dashboard authorization.

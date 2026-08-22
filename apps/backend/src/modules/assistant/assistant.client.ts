@@ -60,6 +60,27 @@ export type AssistantAcademicHelpRequest = {
   history: AssistantInterpretRequest['history'];
 };
 
+export type AssistantCatalogCandidate = {
+  id: string;
+  title: string;
+  titleAr?: string | null;
+  subtitle?: string | null;
+  subtitleAr?: string | null;
+  authors: string[];
+  categories: string[];
+  publisher?: string | null;
+  classification?: string | null;
+  description?: string | null;
+  faculties: string[];
+};
+
+export type AssistantCatalogSelectionRequest = {
+  query: string;
+  locale: 'ar' | 'en';
+  books: AssistantCatalogCandidate[];
+  limit: number;
+};
+
 @Injectable()
 export class AssistantClient {
   async interpret(request: AssistantInterpretRequest): Promise<unknown> {
@@ -72,6 +93,10 @@ export class AssistantClient {
 
   async explainAcademic(request: AssistantAcademicHelpRequest): Promise<unknown> {
     return this.post('/assistant/explain-academic', request);
+  }
+
+  async selectCatalog(request: AssistantCatalogSelectionRequest): Promise<unknown> {
+    return this.post('/assistant/select-catalog', request);
   }
 
   private async post(path: string, request: object): Promise<unknown> {

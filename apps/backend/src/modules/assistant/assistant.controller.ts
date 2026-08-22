@@ -19,7 +19,7 @@ export class AssistantController {
   @ApiOperation({
     summary: 'Send a read-only message to the Delta University Library AI Assistant',
     description:
-      'Gemini classifies a fixed allow-list of catalog, Book details, university information, academic, and member intents when server-side AI is configured. NestJS keeps all library facts authoritative. Public catalog and academic help work for guests; JWT identity exclusively controls member recommendations, loans, and reservations. Bounded structured Book context supports follow-ups without permanent chat storage.',
+      'Gemini classifies a fixed allow-list of catalog, Book details, university information, academic, and member intents when server-side AI is configured. Current topic and learning-goal requests use SEARCH_BOOKS without member history; explicitly personalized requests use RECOMMEND_BOOKS. Semantic SEARCH_BOOKS uses one bounded, catalog-grounded Gemini selection call, accepts only DIRECT or FOUNDATIONAL matches, permits fewer than four or zero results, and then reloads authoritative Books; exact titles continue through direct lookup. NestJS keeps all library facts authoritative. Public catalog and academic help work for guests; JWT identity exclusively controls member recommendations, loans, and reservations. Bounded structured Book context supports follow-ups without permanent chat storage.',
   })
   @ApiBody({ type: AssistantMessageDto })
   @ApiResponse({

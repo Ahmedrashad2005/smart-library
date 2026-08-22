@@ -184,6 +184,114 @@ export class CatalogService {
       sourceCollections,
     };
   }
+
+  async semanticCatalogCandidates(limit: number) {
+    const take = Math.min(75, Math.max(1, limit));
+    const books = await this.prisma.book.findMany({
+      where: {
+        isArchived: false,
+        deletedAt: null,
+        category: { isArchived: false, deletedAt: null },
+      },
+      select: {
+        id: true,
+        title: true,
+        titleAr: true,
+        subtitle: true,
+        subtitleAr: true,
+        ddc: true,
+        description: true,
+        descriptionAr: true,
+        category: { select: { nameEn: true, nameAr: true } },
+        publisher: { select: { name: true, nameAr: true } },
+        authors: {
+          where: { author: { isArchived: false, deletedAt: null } },
+          select: { author: { select: { name: true, nameAr: true } } },
+        },
+        faculties: {
+          where: { faculty: { isActive: true } },
+          select: { faculty: { select: { nameAr: true, nameEn: true } } },
+        },
+      },
+      orderBy: [{ title: 'asc' }, { id: 'asc' }],
+      take,
+    });
+    return books.map((book) => {
+      const description = book.descriptionAr || book.description;
+      return {
+        id: book.id,
+        title: book.title,
+        ...(book.titleAr ? { titleAr: book.titleAr } : {}),
+        ...(book.subtitle ? { subtitle: book.subtitle } : {}),
+        ...(book.subtitleAr ? { subtitleAr: book.subtitleAr } : {}),
+        authors: [
+          ...new Set(
+            book.authors.flatMap(({ author }) =>
+              author.nameAr ? [author.name, author.nameAr] : [author.name],
+            ),
+          ),
+        ].slice(0, 12),
+        categories: [...new Set([book.category.nameEn, book.category.nameAr].filter(Boolean))],
+        ...(book.publisher ? { publisher: book.publisher.nameAr || book.publisher.name } : {}),
+        ...(book.ddc ? { classification: book.ddc } : {}),
+        ...(description ? { description: description.slice(0, 420) } : {}),
+        faculties: [
+          ...new Set(
+            book.faculties.flatMap(({ faculty }) =>
+              faculty.nameEn ? [faculty.nameAr, faculty.nameEn] : [faculty.nameAr],
+            ),
+          ),
+        ].slice(0, 14),
+      };
+    });
+  }
+
+  async semanticCatalogBooks(ids: string[]) {
+    const uniqueIds = [...new Set(ids)].slice(0, 8);
+    if (!uniqueIds.length) return [];
+    const books = await this.prisma.book.findMany({
+      where: {
+        id: { in: uniqueIds },
+        isArchived: false,
+        deletedAt: null,
+        category: { isArchived: false, deletedAt: null },
+      },
+      include: {
+        category: true,
+        publisher: true,
+        authors: { include: { author: true } },
+        faculties: { include: { faculty: true } },
+        copies: {
+          where: {
+            isArchived: false,
+            deletedAt: null,
+            homeLibraryRoomId: { not: null },
+          },
+          select: { status: true, sourceCollection: true },
+        },
+      },
+    });
+    return books.map(({ copies, ...book }) => {
+      const availableCampusCopies = copies.filter(
+        ({ status }) => status === BookCopyStatus.AVAILABLE,
+      ).length;
+      return {
+        ...this.safeBook(book),
+        campusAvailability: {
+          hasPhysicalCopies: copies.length > 0,
+          totalCopies: copies.length,
+          availableCopies: availableCampusCopies,
+          availabilityStatus:
+            copies.length === 0
+              ? ('NOT_HELD' as const)
+              : availableCampusCopies > 0
+                ? ('AVAILABLE' as const)
+                : ('UNAVAILABLE' as const),
+        },
+      };
+    });
+  }
+
   async listCopies(query: {
     q?: string;
     bookId?: string;

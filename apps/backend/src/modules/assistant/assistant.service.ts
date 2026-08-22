@@ -78,7 +78,11 @@ export class AssistantService {
         result = await this.recommend(user, locale);
         break;
       case 'SEARCH_BOOKS':
-        result = await this.search(interpretation.query ?? this.extractQuery(dto.message), locale);
+        result = await this.search(
+          interpretation.query ?? this.extractQuery(dto.message),
+          dto.message,
+          locale,
+        );
         break;
       case 'BOOK_DETAILS':
         result = await this.bookDetails(interpretation, dto.message, locale, history, context);
@@ -295,23 +299,166 @@ export class AssistantService {
     };
   }
 
-  private async search(query: string, locale: 'ar' | 'en') {
-    const result = await this.catalog.listBooks({
+  private async search(query: string, originalMessage: string, locale: 'ar' | 'en') {
+    const literal = await this.catalog.listBooks({
       q: query || undefined,
       limit: '4',
     });
+    if (this.hasExactTitleMatch(query, literal.items)) {
+      this.logger.log(`Assistant catalog search mode=exact_lookup results=${literal.items.length}`);
+      return this.catalogSearchResult(literal.items, locale, 'exact_lookup');
+    }
+    if (!this.assistantAiEnabled() || !query.trim()) {
+      this.logger.log(
+        `Assistant catalog search mode=literal_fallback results=${literal.items.length}`,
+      );
+      return this.catalogSearchResult(literal.items, locale, 'literal_fallback');
+    }
+    try {
+      const configuredLimit = Number(process.env.ASSISTANT_CATALOG_CANDIDATE_LIMIT ?? 75);
+      const candidateLimit = Math.min(75, Math.max(1, configuredLimit));
+      const candidates = await this.catalog.semanticCatalogCandidates(candidateLimit);
+      const books = this.fitCatalogPrompt(
+        candidates,
+        this.redact(originalMessage).slice(0, 300),
+        locale,
+      );
+      if (!books.length) return this.catalogSearchResult([], locale, 'semantic_catalog');
+      const response = await this.client.selectCatalog({
+        query: this.redact(originalMessage).slice(0, 300),
+        locale,
+        books,
+        limit: 4,
+      });
+      const matches = this.validateCatalogSelection(
+        response,
+        new Set(books.map(({ id }) => id)),
+        4,
+      );
+      if (matches === null) throw new Error('Invalid catalog selection response');
+      const authoritative = await this.catalog.semanticCatalogBooks(
+        matches.map(({ bookId }) => bookId),
+      );
+      const booksById = new Map(authoritative.map((book) => [book.id, book]));
+      const selected = matches.flatMap(({ bookId, reason }) => {
+        const book = booksById.get(bookId);
+        return book ? [{ ...book, semanticReason: reason }] : [];
+      });
+      this.logger.log(
+        `Assistant catalog search mode=semantic_catalog candidates=${books.length} selected=${matches.length} results=${selected.length}`,
+      );
+      return this.catalogSearchResult(selected, locale, 'semantic_catalog');
+    } catch (error) {
+      this.logger.warn(
+        `Assistant semantic catalog selection failed safely: ${error instanceof Error ? error.name : 'UnknownError'}`,
+      );
+      this.logger.log(
+        `Assistant catalog search mode=literal_fallback results=${literal.items.length}`,
+      );
+      return this.catalogSearchResult(literal.items, locale, 'literal_fallback');
+    }
+  }
+
+  private catalogSearchResult(
+    books: Array<{ id: string }>,
+    locale: 'ar' | 'en',
+    searchMode: 'exact_lookup' | 'semantic_catalog' | 'literal_fallback',
+  ): AssistantResult {
     return {
       type: 'BOOK_SEARCH_RESULTS',
-      message: result.items.length
+      message: books.length
         ? locale === 'ar'
-          ? `وجدت ${result.items.length} من كتب مكتبة جامعة الدلتا.`
-          : `I found ${result.items.length} Delta University Library books.`
+          ? searchMode === 'semantic_catalog'
+            ? this.arabicSemanticResultMessage(books.length)
+            : `وجدت ${books.length} من كتب مكتبة جامعة الدلتا.`
+          : searchMode === 'semantic_catalog'
+            ? `I found ${books.length} ${books.length === 1 ? 'book' : 'books'} in the current catalog with a clear connection to this request.`
+            : `I found ${books.length} Delta University Library books.`
         : locale === 'ar'
-          ? 'لم أجد كتبًا مطابقة في فهرس المكتبة.'
-          : 'I could not find matching books in the library catalog.',
-      books: result.items,
+          ? 'ملقتش حاليًا كتاب مناسب للموضوع ده في فهرس مكتبة جامعة الدلتا.'
+          : 'I could not find a suitable book for this topic in the Delta University Library catalog.',
+      books,
+      searchMode,
       suggestions: this.suggestions(locale),
     };
+  }
+
+  private arabicSemanticResultMessage(count: number) {
+    if (count === 1) return 'لقيت كتابًا واحدًا في الفهرس الحالي مرتبطًا بشكل واضح بالطلب ده.';
+    if (count === 2) return 'لقيت كتابين في الفهرس الحالي مرتبطين بشكل واضح بالطلب ده.';
+    return `لقيت ${count} كتب في الفهرس الحالي مرتبطة بشكل واضح بالطلب ده.`;
+  }
+
+  private hasExactTitleMatch(
+    query: string,
+    books: Array<{ title?: string; titleAr?: string | null }>,
+  ) {
+    const normalizedQuery = this.normalizeTitle(query);
+    if (!normalizedQuery) return false;
+    return books.some(
+      ({ title, titleAr }) =>
+        this.normalizeTitle(title ?? '') === normalizedQuery ||
+        this.normalizeTitle(titleAr ?? '') === normalizedQuery,
+    );
+  }
+
+  private normalizeTitle(value: string) {
+    return value
+      .normalize('NFKC')
+      .toLocaleLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, ' ')
+      .trim();
+  }
+
+  private fitCatalogPrompt<T extends { id: string }>(
+    candidates: T[],
+    query: string,
+    locale: 'ar' | 'en',
+  ) {
+    const configuredBytes = Number(process.env.ASSISTANT_CATALOG_PROMPT_MAX_BYTES ?? 60_000);
+    const byteLimit = Math.min(80_000, Math.max(10_000, configuredBytes));
+    let bytes = Buffer.byteLength(JSON.stringify({ query, locale, limit: 4, books: [] }), 'utf8');
+    const bounded: T[] = [];
+    for (const candidate of candidates.slice(0, 75)) {
+      const candidateBytes = Buffer.byteLength(JSON.stringify(candidate), 'utf8') + 1;
+      if (bytes + candidateBytes > byteLimit) break;
+      bounded.push(candidate);
+      bytes += candidateBytes;
+    }
+    return bounded;
+  }
+
+  private validateCatalogSelection(response: unknown, candidateIds: Set<string>, limit: number) {
+    if (!response || typeof response !== 'object' || !('matches' in response)) return null;
+    const matches = (response as { matches?: unknown }).matches;
+    if (!Array.isArray(matches)) return null;
+    const seen = new Set<string>();
+    const valid: Array<{
+      bookId: string;
+      relevance: 'DIRECT' | 'FOUNDATIONAL';
+      reason: string;
+    }> = [];
+    for (const item of matches) {
+      if (!item || typeof item !== 'object') continue;
+      const { bookId, relevance, reason } = item as {
+        bookId?: unknown;
+        relevance?: unknown;
+        reason?: unknown;
+      };
+      if (
+        typeof bookId !== 'string' ||
+        (relevance !== 'DIRECT' && relevance !== 'FOUNDATIONAL') ||
+        typeof reason !== 'string' ||
+        !candidateIds.has(bookId) ||
+        seen.has(bookId) ||
+        !reason.trim()
+      )
+        continue;
+      seen.add(bookId);
+      valid.push({ bookId, relevance, reason: reason.trim().slice(0, 240) });
+      if (valid.length === limit) break;
+    }
+    return valid;
   }
 
   private async resolveBook(

@@ -12,6 +12,7 @@ from app.assistant import (
     ACADEMIC_HELP_SYSTEM_INSTRUCTION,
     ASSISTANT_SYSTEM_INSTRUCTION,
     BOOK_EXPLANATION_SYSTEM_INSTRUCTION,
+    CATALOG_SELECTION_SYSTEM_INSTRUCTION,
     AcademicHelpGenerator,
     AcademicHelpRequest,
     AcademicHelpResponse,
@@ -25,8 +26,12 @@ from app.assistant import (
     BookExplanationGenerator,
     BookExplanationResponse,
     BookExplanationRequest,
+    CatalogSelectionRequest,
+    CatalogSelectionResponse,
+    CatalogSelector,
     build_academic_help_payload,
     build_assistant_payload,
+    build_catalog_selection_payload,
 )
 from app.main import assistant_ai_enabled, gemini_api_configured, log_assistant_failure
 
@@ -57,6 +62,16 @@ class FakeAcademicAdapter:
         self.payload = ""
 
     async def explain_academic(self, payload: str) -> str:
+        self.payload = payload
+        return self.value
+
+
+class FakeCatalogAdapter:
+    def __init__(self, value: str) -> None:
+        self.value = value
+        self.payload = ""
+
+    async def select_catalog(self, payload: str) -> str:
         self.payload = payload
         return self.value
 
@@ -104,6 +119,247 @@ class AssistantTests(unittest.IsolatedAsyncioTestCase):
             },
             allowedBookIds=["book-1"],
         )
+
+    def catalog_request(self, query: str = "عايز كتب عن الشبكات") -> CatalogSelectionRequest:
+        return CatalogSelectionRequest(
+            query=query,
+            locale="ar",
+            books=[
+                {
+                    "id": "network-book",
+                    "title": "Data and Computer Communications",
+                    "authors": ["William Stallings"],
+                    "categories": ["Communications"],
+                    "description": "Data communication and networking concepts.",
+                    "faculties": [],
+                },
+                {
+                    "id": "java-book",
+                    "title": "Big Java",
+                    "authors": ["Cay Horstmann"],
+                    "categories": ["Programming"],
+                    "faculties": [],
+                },
+            ],
+            limit=4,
+        )
+
+    async def test_catalog_selector_accepts_semantic_arabic_english_and_mixed_queries(self) -> None:
+        for query in ("الشبكات", "computer networks", "عايز كتاب عن wireless communication"):
+            with self.subTest(query=query):
+                adapter = FakeCatalogAdapter(
+                    json.dumps(
+                        {
+                            "matches": [
+                                {
+                                    "bookId": "network-book",
+                                    "relevance": "DIRECT",
+                                    "reason": "مرتبط باتصالات البيانات والشبكات.",
+                                }
+                            ]
+                        }
+                    )
+                )
+                result = await CatalogSelector(adapter).select(self.catalog_request(query))
+                self.assertEqual([match.bookId for match in result.matches], ["network-book"])
+                payload = json.loads(adapter.payload)
+                self.assertEqual(payload["query"], query)
+                self.assertNotIn("history", payload)
+
+    async def test_catalog_selector_rejects_invented_and_duplicate_ids_and_caps_results(self) -> None:
+        request = CatalogSelectionRequest(
+            query="communications",
+            locale="en",
+            books=[
+                {
+                    "id": f"book-{index}",
+                    "title": f"Book {index}",
+                    "authors": [],
+                    "categories": ["Communications"],
+                    "faculties": [],
+                }
+                for index in range(1, 7)
+            ],
+            limit=4,
+        )
+        adapter = FakeCatalogAdapter(
+            json.dumps(
+                {
+                    "matches": [
+                        {"bookId": "invented", "relevance": "DIRECT", "reason": "Not real."},
+                        {"bookId": "book-1", "relevance": "DIRECT", "reason": "Relevant."},
+                        {"bookId": "book-1", "relevance": "DIRECT", "reason": "Duplicate."},
+                        *[
+                            {
+                                "bookId": f"book-{index}",
+                                "relevance": "DIRECT",
+                                "reason": "Relevant.",
+                            }
+                            for index in range(2, 7)
+                        ],
+                    ]
+                }
+            )
+        )
+        result = await CatalogSelector(adapter).select(request)
+        self.assertEqual([match.bookId for match in result.matches], [f"book-{i}" for i in range(1, 5)])
+
+    async def test_catalog_selector_accepts_an_honest_zero_match_response(self) -> None:
+        result = await CatalogSelector(FakeCatalogAdapter('{"matches":[]}')).select(
+            self.catalog_request("موضوع غير موجود خالص")
+        )
+        self.assertEqual(result.matches, [])
+
+    async def test_catalog_selector_discards_weak_matches_without_filling_the_limit(self) -> None:
+        request = CatalogSelectionRequest(
+            query="عايز كتب تساعدني أبقى Backend developer",
+            locale="ar",
+            books=[
+                {
+                    "id": "programming",
+                    "title": "Programming Language",
+                    "authors": [],
+                    "categories": ["Programming"],
+                    "faculties": [],
+                },
+                {
+                    "id": "operating-systems",
+                    "title": "Operating System Concepts",
+                    "authors": [],
+                    "categories": ["Computer Science"],
+                    "faculties": [],
+                },
+                {
+                    "id": "wireless",
+                    "title": "Wireless Communications",
+                    "authors": [],
+                    "categories": ["Communications"],
+                    "faculties": [],
+                },
+                {
+                    "id": "fiber",
+                    "title": "Optical Fiber Communication",
+                    "authors": [],
+                    "categories": ["Communications"],
+                    "faculties": [],
+                },
+            ],
+            limit=4,
+        )
+        result = await CatalogSelector(
+            FakeCatalogAdapter(
+                json.dumps(
+                    {
+                        "matches": [
+                            {
+                                "bookId": "programming",
+                                "relevance": "DIRECT",
+                                "reason": "يدعم تعلم البرمجة.",
+                            },
+                            {
+                                "bookId": "operating-systems",
+                                "relevance": "FOUNDATIONAL",
+                                "reason": "أساس مفيد لفهم بيئة تشغيل الخوادم.",
+                            },
+                            {
+                                "bookId": "wireless",
+                                "relevance": "WEAK",
+                                "reason": "صلة عامة بالحوسبة.",
+                            },
+                            {
+                                "bookId": "fiber",
+                                "relevance": "WEAK",
+                                "reason": "صلة عامة بالشبكات.",
+                            },
+                        ]
+                    }
+                )
+            )
+        ).select(request)
+        self.assertEqual([match.bookId for match in result.matches], ["programming", "operating-systems"])
+        self.assertEqual(
+            [match.relevance.value for match in result.matches], ["DIRECT", "FOUNDATIONAL"]
+        )
+
+    async def test_explicit_wireless_and_fiber_requests_preserve_direct_matches(self) -> None:
+        cases = (
+            ("عايز كتب عن wireless communication", "network-book"),
+            ("عايز كتب عن fiber optics", "fiber-book"),
+        )
+        for query, expected_id in cases:
+            with self.subTest(query=query):
+                request = CatalogSelectionRequest(
+                    query=query,
+                    locale="ar",
+                    books=[
+                        {
+                            "id": "network-book",
+                            "title": "Wireless Communications",
+                            "authors": [],
+                            "categories": ["Communications"],
+                            "faculties": [],
+                        },
+                        {
+                            "id": "fiber-book",
+                            "title": "Optical Fiber Communication",
+                            "authors": [],
+                            "categories": ["Communications"],
+                            "faculties": [],
+                        },
+                    ],
+                    limit=4,
+                )
+                result = await CatalogSelector(
+                    FakeCatalogAdapter(
+                        json.dumps(
+                            {
+                                "matches": [
+                                    {
+                                        "bookId": expected_id,
+                                        "relevance": "DIRECT",
+                                        "reason": "يتناول الموضوع المطلوب مباشرة.",
+                                    }
+                                ]
+                            }
+                        )
+                    )
+                ).select(request)
+                self.assertEqual([match.bookId for match in result.matches], [expected_id])
+
+    def test_catalog_selection_contract_is_bounded_unique_and_privacy_safe(self) -> None:
+        payload = json.loads(build_catalog_selection_payload(self.catalog_request()))
+        self.assertEqual(set(payload), {"query", "locale", "books", "limit"})
+        self.assertNotIn("memberId", json.dumps(payload))
+        self.assertNotIn("history", payload)
+        with self.assertRaises(ValidationError):
+            CatalogSelectionRequest(
+                query="test",
+                books=[
+                    {"id": "same", "title": "One"},
+                    {"id": "same", "title": "Two"},
+                ],
+            )
+
+    def test_catalog_selection_prompt_is_semantic_grounded_and_not_query_expansion(self) -> None:
+        instruction = CATALOG_SELECTION_SYSTEM_INSTRUCTION.lower()
+        self.assertIn("from this list only", instruction)
+        self.assertIn("never invent", instruction)
+        self.assertIn("return zero", instruction)
+        self.assertIn("never fill the result quota", instruction)
+        self.assertIn("direct", instruction)
+        self.assertIn("foundational", instruction)
+        self.assertIn("never return weak", instruction)
+        self.assertIn("backend developer", instruction)
+        self.assertIn("wireless or", instruction)
+        self.assertIn("untrusted data", instruction)
+        self.assertNotIn("synonym list", instruction)
+
+    def test_current_learning_goal_dominates_personalized_history_in_intent_prompt(self) -> None:
+        instruction = ASSISTANT_SYSTEM_INSTRUCTION.lower()
+        self.assertIn("current message dominates", instruction)
+        self.assertIn("backend developer", instruction)
+        self.assertIn("search_books", instruction)
+        self.assertIn("do not turn", instruction)
 
     async def test_structured_intent_is_parsed(self) -> None:
         result = await AssistantInterpreter(
@@ -300,6 +556,7 @@ class AssistantTests(unittest.IsolatedAsyncioTestCase):
             AssistantInterpretResponse,
             AcademicHelpResponse,
             BookExplanationResponse,
+            CatalogSelectionResponse,
         ):
             assert_supported(model.model_json_schema())
 

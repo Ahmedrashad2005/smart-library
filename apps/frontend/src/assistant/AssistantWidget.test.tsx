@@ -283,6 +283,25 @@ describe('Delta University Library AI Assistant widget', () => {
     expect(go).toHaveBeenCalledWith('/books/big-java');
   });
 
+  it('renders the localized semantic relevance reason on the existing compact Book card', async () => {
+    sendMock.mockResolvedValue(
+      response({
+        type: 'BOOK_SEARCH_RESULTS',
+        books: [
+          {
+            ...book,
+            semanticReason: 'مرتبط بطلبك لأنه يتناول اتصالات البيانات والشبكات.',
+          },
+        ],
+      }),
+    );
+    await openAndSend('اي الكتب اللي بتتكلم عن الشبكات؟');
+    expect(
+      await screen.findByText('مرتبط بطلبك لأنه يتناول اتصالات البيانات والشبكات.'),
+    ).toBeVisible();
+    expect(screen.getByRole('button', { name: 'عرض الكتاب' })).toBeVisible();
+  });
+
   it('renders compact loan cards with authoritative due date', async () => {
     sendMock.mockResolvedValue(
       response({

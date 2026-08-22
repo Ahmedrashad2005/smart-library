@@ -75,7 +75,7 @@ export type AssistantResponse = {
     | 'LOGIN_REQUIRED'
     | 'ERROR';
   message: string;
-  books?: Array<PublicBook & { reason?: string }>;
+  books?: Array<PublicBook & { reason?: string; semanticReason?: string }>;
   loans?: AssistantLoan[];
   reservations?: AssistantReservation[];
   title?: string;
