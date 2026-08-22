@@ -122,3 +122,27 @@ sequenceDiagram
   A->>D: Validate, revoke, replace session
   A-->>C: New access token + rotated cookie
 ```
+
+# Book preview PDFs
+
+Book detail and list responses include safe optional `preview` presentation metadata. Internal storage keys and filesystem paths are never returned. See [Book Preview PDF](book-preview-pdf.md) for the complete contract and storage rules.
+
+- `POST /api/v1/books/:bookId/preview-pdf` — `LIBRARIAN`/`ADMIN`, multipart field `file`, uploads or safely replaces a PDF.
+- `GET /api/v1/books/:bookId/preview-pdf` — authenticated users, streams `application/pdf` inline.
+- `DELETE /api/v1/books/:bookId/preview-pdf` — `LIBRARIAN`/`ADMIN`, safely and idempotently removes the asset.
+
+## AI-assisted member recommendations
+
+`GET /api/v1/recommendations/me?limit=4&locale=ar` is available only to an authenticated `MEMBER`. Identity comes from JWT; the endpoint never accepts `memberId`, `userId`, email, or membership number. `limit` is optional, defaults to the configured recommendation limit, and is validated from 1 through 8. `locale` is optional and restricted to `ar|en`; it localizes reasons but never changes ownership.
+
+The response contains `mode` (`personalized`, `cold_start`, or `fallback`), `generatedAt`, and ranked `items`. Each item combines a concise reason with safe authoritative Book presentation data loaded from PostgreSQL after AI-output validation. No prompt, raw Gemini response, private member data, authentication data, or internal candidate payload is exposed. Swagger documents the endpoint under `Recommendations`.
+
+See [AI recommendations](ai-recommendations.md) for the complete privacy, candidate, structured-output, cold-start, and deterministic fallback contract.
+
+## Delta University Library AI Assistant
+
+`POST /api/v1/assistant/message` is a read-only bilingual Assistant endpoint. The body contains `message` (1–1000 characters), optional `locale: ar|en`, at most ten compact conversation turns, and optional structured `context: { referencedBookIds, selectedBookId, lastIntent }`. Context is capped and validated against prior structured Book references; it cannot contain identity. An optional Bearer JWT enables MEMBER-only recommendations, loans, and reservations; guests retain book search, real-book explanations, availability, confirmed location, academic help, trusted university information, and general library guidance.
+
+The internal Python contract uses `POST /assistant/interpret` for the minimal validated intent/query/reference result, `POST /assistant/explain-academic` for a bounded structured academic answer after classification, and `POST /assistant/explain-book` for a structured explanation of a safe backend-supplied real Book projection. These are service-to-service boundaries; they accept no member identity and own no library data or write action.
+
+The response type is one of `TEXT`, `ACADEMIC_EXPLANATION`, `BOOK_EXPLANATION`, `BOOK_SEARCH_RESULTS`, `BOOK_RECOMMENDATIONS`, `BOOK_DETAILS`, `BOOK_AVAILABILITY`, `BOOK_LOCATION`, `LOANS`, `RESERVATIONS`, `LOGIN_REQUIRED`, or `ERROR`, with safe presentation data and the next bounded context. `ACADEMIC_EXPLANATION` contains `title`, `summary`, three to five `keyPoints`, optional `example`/`useCase`, and one to three executable suggestions. `BOOK_EXPLANATION` contains the authoritative Book presentation record plus `overview`, up to four `topics`, a bounded `level`, optional `whyUseful`, and a source `caveat` when catalog evidence is limited. NestJS obtains all library facts from PostgreSQL and permits no Assistant write action. See [AI Assistant](ai-assistant.md) for live activation, tools, authority, privacy, conversation references, fallback, and frontend behavior.

@@ -9,6 +9,8 @@ import { UsersModule } from './modules/users/users.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { LoansModule } from './modules/loans/loans.module';
 import { ReservationsModule } from './modules/reservations/reservations.module';
+import { RecommendationsModule } from './modules/recommendations/recommendations.module';
+import { AssistantModule } from './modules/assistant/assistant.module';
 
 @Module({
   imports: [
@@ -20,6 +22,8 @@ import { ReservationsModule } from './modules/reservations/reservations.module';
     CatalogModule,
     LoansModule,
     ReservationsModule,
+    RecommendationsModule,
+    AssistantModule,
   ],
   controllers: [AppController],
 })

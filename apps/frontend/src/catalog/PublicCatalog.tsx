@@ -6,6 +6,7 @@ import { BookCard } from './BookCard';
 import { CategoryStrip } from './CategoryStrip';
 import { HeroBanner } from './HeroBanner';
 import { FacultiesSection } from '../faculties/FacultiesSection';
+import { RecommendationsSection } from '../recommendations/RecommendationsSection';
 import {
   publicCategoryName,
   type PublicBook,
@@ -21,6 +22,7 @@ type PublicCatalogProps = {
   locale: PublicLocale;
   go: (to: string) => void;
   showFullCatalog?: boolean;
+  memberToken?: string;
 };
 
 const copy = {
@@ -142,6 +144,7 @@ export function PublicCatalog({
   locale,
   go,
   showFullCatalog = true,
+  memberToken,
 }: PublicCatalogProps): JSX.Element {
   const labels = copy[locale];
   const [query, setQuery] = useState('');
@@ -286,6 +289,10 @@ export function PublicCatalog({
           heading={labels.categories}
           onSelect={chooseCategory}
         />
+      )}
+
+      {!showFullCatalog && memberToken && (
+        <RecommendationsSection accessToken={memberToken} locale={locale} go={go} />
       )}
 
       {!discoveryError && (

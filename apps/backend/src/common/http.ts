@@ -16,10 +16,19 @@ export class GlobalExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost): void {
     const response = host.switchToHttp().getResponse();
     const request = host.switchToHttp().getRequest();
-    const status =
-      exception instanceof HttpException ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
-    const body =
-      exception instanceof HttpException
+    const isUploadLimit =
+      typeof exception === 'object' &&
+      exception !== null &&
+      'code' in exception &&
+      exception.code === 'LIMIT_FILE_SIZE';
+    const status = isUploadLimit
+      ? HttpStatus.PAYLOAD_TOO_LARGE
+      : exception instanceof HttpException
+        ? exception.getStatus()
+        : HttpStatus.INTERNAL_SERVER_ERROR;
+    const body = isUploadLimit
+      ? { message: 'Book preview PDF exceeds the configured size limit' }
+      : exception instanceof HttpException
         ? exception.getResponse()
         : { message: 'Internal server error' };
     const message =

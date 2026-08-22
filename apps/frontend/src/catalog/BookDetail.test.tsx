@@ -173,4 +173,33 @@ describe('Delta University Library Book Details', () => {
     ).toBeVisible();
     expect(screen.queryByRole('button', { name: 'عرض المكان' })).not.toBeInTheDocument();
   });
+
+  it('shows the Book Preview CTA only when safe preview metadata is available', async () => {
+    mockedApi.mockResolvedValueOnce(
+      campusBook({
+        preview: {
+          available: true,
+          url: '/books/book-os/preview-pdf',
+          originalName: 'preview.pdf',
+          size: 1024,
+          updatedAt: '2026-08-22T00:00:00.000Z',
+        },
+      }),
+    );
+    render(<BookDetail slug="preview-book" locale="ar" go={go} />);
+    const action = await screen.findByRole('button', { name: 'فتح معاينة الكتاب' });
+    await userEvent.click(action);
+    expect(go).toHaveBeenCalledWith('/books/campus-source-17-operating-system-concepts/preview');
+  });
+
+  it('does not render a fake preview action when the Book has no PDF', async () => {
+    mockedApi.mockResolvedValueOnce(
+      campusBook({
+        preview: { available: false, url: null, originalName: null, size: null, updatedAt: null },
+      }),
+    );
+    render(<BookDetail slug="without-preview" locale="ar" go={go} />);
+    await screen.findByRole('heading', { name: 'Operating System Concepts' });
+    expect(screen.queryByRole('button', { name: 'فتح معاينة الكتاب' })).not.toBeInTheDocument();
+  });
 });

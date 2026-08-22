@@ -311,41 +311,46 @@ model Shelf {
 }
 
 model Book {
-  id                    String        @id @default(uuid()) @db.Uuid
-  title                 String
-  titleAr               String?
-  subtitle              String?
-  subtitleAr            String?
-  slug                  String        @unique
-  isbn10                String?       @unique
-  isbn13                String?       @unique
-  description           String?
-  descriptionAr         String?
-  coverImageUrl         String?
-  publicationYear       Int?
-  sourcePublicationInfo String?
-  ddc                   String?
-  edition               String?
-  language              String        @default("en")
-  pageCount             Int?
-  publisherId           String?       @db.Uuid
-  categoryId            String        @db.Uuid
-  averageRating         Float         @default(0)
-  ratingsCount          Int           @default(0)
-  totalCopies           Int           @default(0)
-  availableCopies       Int           @default(0)
-  borrowCount           Int           @default(0)
-  isFeatured            Boolean       @default(false)
-  isArchived            Boolean       @default(false)
-  createdAt             DateTime      @default(now())
-  updatedAt             DateTime      @updatedAt
-  deletedAt             DateTime?
-  publisher             Publisher?    @relation(fields: [publisherId], references: [id], onDelete: Restrict)
-  category              Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  authors               BookAuthor[]
-  faculties             BookFaculty[]
-  copies                BookCopy[]
-  reservations          Reservation[]
+  id                     String        @id @default(uuid()) @db.Uuid
+  title                  String
+  titleAr                String?
+  subtitle               String?
+  subtitleAr             String?
+  slug                   String        @unique
+  isbn10                 String?       @unique
+  isbn13                 String?       @unique
+  description            String?
+  descriptionAr          String?
+  coverImageUrl          String?
+  previewPdfKey          String?
+  previewPdfOriginalName String?
+  previewPdfMimeType     String?
+  previewPdfSize         Int?
+  previewPdfUpdatedAt    DateTime?
+  publicationYear        Int?
+  sourcePublicationInfo  String?
+  ddc                    String?
+  edition                String?
+  language               String        @default("en")
+  pageCount              Int?
+  publisherId            String?       @db.Uuid
+  categoryId             String        @db.Uuid
+  averageRating          Float         @default(0)
+  ratingsCount           Int           @default(0)
+  totalCopies            Int           @default(0)
+  availableCopies        Int           @default(0)
+  borrowCount            Int           @default(0)
+  isFeatured             Boolean       @default(false)
+  isArchived             Boolean       @default(false)
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+  deletedAt              DateTime?
+  publisher              Publisher?    @relation(fields: [publisherId], references: [id], onDelete: Restrict)
+  category               Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  authors                BookAuthor[]
+  faculties              BookFaculty[]
+  copies                 BookCopy[]
+  reservations           Reservation[]
 
   @@index([isArchived, deletedAt, title])
   @@index([categoryId, language])

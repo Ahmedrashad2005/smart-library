@@ -17,6 +17,7 @@ import { randomUUID } from 'crypto';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditLogService } from '../audit-logs/audit-log.service';
 import { CreateBookDto, CreateCopyDto, UpdateBookDto, UpdateCopyDto } from './catalog.dto';
+import { BookPreviewService } from './book-preview.service';
 
 const campusRoomInclude = {
   floor: {
@@ -29,6 +30,7 @@ export class CatalogService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditLogService,
+    private readonly previews: BookPreviewService,
   ) {}
   async listBooks(
     query: {
@@ -161,7 +163,7 @@ export class CatalogService {
           ({ status }) => status === BookCopyStatus.AVAILABLE,
         ).length;
         return {
-          ...book,
+          ...this.safeBook(book),
           campusAvailability: {
             hasPhysicalCopies: copies.length > 0,
             totalCopies: copies.length,
@@ -323,7 +325,7 @@ export class CatalogService {
       (copy) => copy.status === BookCopyStatus.AVAILABLE,
     );
     return {
-      ...book,
+      ...this.safeBook(book),
       copies,
       campusAvailability: {
         hasPhysicalCopies: campusCopies.length > 0,
@@ -357,7 +359,7 @@ export class CatalogService {
       await this.audit.write('CREATE', 'book', book.id, actor, undefined, {
         newValues: book as unknown as Prisma.InputJsonValue,
       });
-      return book;
+      return this.safeBook(book);
     } catch (error) {
       this.rethrowConstraint(error);
     }
@@ -402,7 +404,7 @@ export class CatalogService {
         oldValues: old as unknown as Prisma.InputJsonValue,
         newValues: book as unknown as Prisma.InputJsonValue,
       });
-      return book;
+      return this.safeBook(book);
     } catch (error) {
       this.rethrowConstraint(error);
     }
@@ -580,7 +582,7 @@ export class CatalogService {
           newValues: book as unknown as Prisma.InputJsonValue,
         },
       });
-      return book;
+      return this.safeBook(book);
     });
   }
   async restoreBook(id: string, actor: Pick<User, 'id'> | null = null) {
@@ -601,7 +603,7 @@ export class CatalogService {
           newValues: book as unknown as Prisma.InputJsonValue,
         },
       });
-      return book;
+      return this.safeBook(book);
     });
   }
   private async assertActiveCategory(id: string) {
@@ -700,5 +702,32 @@ export class CatalogService {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002')
       throw new BadRequestException('A record with this unique value already exists');
     throw error;
+  }
+
+  private safeBook<
+    T extends {
+      id: string;
+      title: string;
+      previewPdfKey: string | null;
+      previewPdfOriginalName: string | null;
+      previewPdfMimeType: string | null;
+      previewPdfSize: number | null;
+      previewPdfUpdatedAt: Date | null;
+    },
+  >(book: T) {
+    const {
+      previewPdfKey: _key,
+      previewPdfOriginalName: _originalName,
+      previewPdfMimeType: _mimeType,
+      previewPdfSize: _size,
+      previewPdfUpdatedAt: _updatedAt,
+      ...safe
+    } = book;
+    void _key;
+    void _originalName;
+    void _mimeType;
+    void _size;
+    void _updatedAt;
+    return { ...safe, preview: this.previews.presentation(book) };
   }
 }

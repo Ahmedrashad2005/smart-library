@@ -40,6 +40,7 @@ Use npm workspaces for JavaScript applications and Python virtual environments f
 - Use Prisma with normalized PostgreSQL entities, UUID primary keys, timestamps where appropriate, and archive/soft-delete fields for critical data. Add DB constraints and indexes as well as application validation.
 - Use transactions and concurrency-safe updates for borrowing, returns, reservations, reservation assignment, fine payments, and availability counters. Never permit duplicate active reservations, a double-borrowed copy, or negative availability.
 - The NestJS API consumes the FastAPI recommendation service. On its unavailability, return a popular-books fallback rather than fail the request.
+- The Delta University Library AI Assistant is the primary user-facing AI surface. It reuses the existing recommendation pipeline and exposes only fixed, read-only tools for catalog search, availability/location, member Loans/Reservations, and academic help. Gemini never owns library facts or member identity; do not add chat write actions or permanent memory without a separately approved phase.
 - Configuration comes from environment variables. Never commit secrets, credentials, access tokens, or real user data.
 
 ## Security and access control

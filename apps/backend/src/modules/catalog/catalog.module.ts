@@ -8,6 +8,9 @@ import { CampusLocationController } from './campus-location.controller';
 import { CampusLocationService } from './campus-location.service';
 import { FacultyController } from './faculty.controller';
 import { FacultyService } from './faculty.service';
+import { BookAssetStorageService } from './book-asset-storage.service';
+import { BookPreviewController } from './book-preview.controller';
+import { BookPreviewService } from './book-preview.service';
 @Module({
   imports: [AuditLogModule],
   controllers: [
@@ -15,8 +18,16 @@ import { FacultyService } from './faculty.service';
     MasterDataController,
     CampusLocationController,
     FacultyController,
+    BookPreviewController,
   ],
-  providers: [CatalogService, MasterDataService, CampusLocationService, FacultyService],
+  providers: [
+    CatalogService,
+    MasterDataService,
+    CampusLocationService,
+    FacultyService,
+    BookAssetStorageService,
+    BookPreviewService,
+  ],
   exports: [CatalogService],
 })
 export class CatalogModule {}

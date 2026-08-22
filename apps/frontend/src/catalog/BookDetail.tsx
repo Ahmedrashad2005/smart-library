@@ -4,6 +4,7 @@ import { apiRequest, requestMessage } from '../lib/api';
 import { ReservationAction } from '../reservations/ReservationAction';
 import { BookCoverMedia } from './BookCoverMedia';
 import { CampusAvailabilityCard, type CampusAvailability } from './CampusAvailabilityCard';
+import type { PreviewMetadata } from './BookPreviewField';
 import {
   publicCategoryName,
   type PublicAuthor,
@@ -27,6 +28,7 @@ export type BookDetailRecord = {
   category?: PublicCategory;
   authors: Array<{ author: PublicAuthor }>;
   campusAvailability: CampusAvailability;
+  preview?: PreviewMetadata;
 };
 
 type Props = {
@@ -51,6 +53,9 @@ const copy = {
     campusAvailability: 'خيارات توفر الكتاب في المكتبة الجامعية',
     loading: 'جارٍ تحميل تفاصيل الكتاب…',
     retry: 'العودة إلى الكتب',
+    preview: 'معاينة الكتاب',
+    previewDescription: 'استعرض غلاف الكتاب وفهرس المحتويات.',
+    openPreview: 'فتح معاينة الكتاب',
   },
   en: {
     back: 'Back to books',
@@ -64,6 +69,9 @@ const copy = {
     campusAvailability: 'University Library availability',
     loading: 'Loading book details…',
     retry: 'Back to books',
+    preview: 'Book Preview',
+    previewDescription: 'Preview the cover and table of contents.',
+    openPreview: 'Open book preview',
   },
 } as const;
 
@@ -171,6 +179,17 @@ export function BookDetail({
               </div>
             )}
           </dl>
+          {book.preview?.available && (
+            <section className="book-detail-preview" aria-labelledby="book-preview-title">
+              <div>
+                <h2 id="book-preview-title">{labels.preview}</h2>
+                <p>{labels.previewDescription}</p>
+              </div>
+              <button className="button quiet" onClick={() => go(`/books/${book.slug}/preview`)}>
+                {labels.openPreview}
+              </button>
+            </section>
+          )}
         </div>
         <aside className="book-detail-acquisition" aria-label={labels.campusAvailability}>
           <CampusAvailabilityCard availability={book.campusAvailability} locale={locale} />

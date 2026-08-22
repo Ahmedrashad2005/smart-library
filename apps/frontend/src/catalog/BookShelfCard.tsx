@@ -8,6 +8,7 @@ type Props = {
   go: (to: string) => void;
   isNew?: boolean;
   campusScope?: boolean;
+  recommendationReason?: string;
 };
 
 export function BookShelfCard({
@@ -16,6 +17,7 @@ export function BookShelfCard({
   go,
   isNew = false,
   campusScope = false,
+  recommendationReason,
 }: Props): JSX.Element {
   const title = locale === 'ar' ? book.titleAr || book.title : book.title;
   const authors = book.authors
@@ -84,6 +86,11 @@ export function BookShelfCard({
         <p dir="auto" title={authorText}>
           {authorText}
         </p>
+        {recommendationReason && (
+          <p className="book-shelf-card__reason" dir="auto">
+            {recommendationReason}
+          </p>
+        )}
         <span className={available ? 'shelf-available' : 'shelf-unavailable'}>
           <i aria-hidden="true" />
           {available ? labels.available : labels.unavailable}

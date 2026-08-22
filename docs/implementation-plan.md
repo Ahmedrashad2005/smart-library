@@ -209,6 +209,51 @@ Phase 5.3.2A remains the read-only foundation. Phase 5.3.2B adds Cancellation, D
 
 Phase 5.3.3 is a member presentation and safe-response refinement only. It adds no pickup, QR/scanning, `COLLECTED`, Reservation-to-Loan conversion, fines, payments, notifications, or new circulation policy.
 
+### Focused AI recommendation MVP — verified complete
+
+- [x] Add a MEMBER-only `/api/v1/recommendations/me` endpoint whose ownership comes exclusively from JWT.
+- [x] Build a read-only interest context from the newest five Loans and five meaningful Reservations without sending PII.
+- [x] Select at most 30 real active Delta University Library candidate books, exclude current activity, and relax only recent-history exclusion when necessary.
+- [x] Add the narrow FastAPI `/recommendations/rank` service using the pinned official Gemini SDK, configurable lightweight model, strict structured output, and injection-resistant instruction.
+- [x] Validate candidate membership, uniqueness, reason shape, and result count in NestJS, then reload authoritative Book presentation data.
+- [x] Add deterministic cold-start and safe disabled/error/timeout/malformed-output fallback modes.
+- [x] Add the authenticated `مقترحة لك` / `Recommended for You` homepage shelf using existing book cards and honest loading/error/empty/mode states.
+- [x] Add focused Python, NestJS, JWT/RBAC, and rendered frontend tests without real Gemini calls or development-data fixtures.
+- [x] Document architecture, privacy, configuration, API contract, limitations, and future assistant compatibility.
+- [x] Complete full repository, Docker/runtime, data-integrity, and 1440/900/390 visual verification.
+
+### Delta University Library AI Assistant MVP — implementation complete, final verification pending
+
+- [x] Preserve and reuse the existing authenticated recommendation engine as one Assistant tool.
+- [x] Add the safe structured Python Gemini intent/academic interpreter with bounded context and prompt-injection protections.
+- [x] Add the optional-auth, read-only `/api/v1/assistant/message` NestJS orchestrator and fixed allow-listed catalog, availability, location, recommendation, Loan, and Reservation tools.
+- [x] Derive private ownership only from JWT, redact PII at the AI boundary, validate referenced Book IDs, and expose no write actions.
+- [x] Add the accessible responsive Delta University floating Assistant with real quick actions, rich Book/Loan/Reservation cards, guest login flow, RTL/LTR, loading, error, and duplicate-submit behavior.
+- [x] Add focused Python, backend orchestration, and rendered frontend tests without real Gemini calls or development-data fixtures.
+- [x] Complete full repository, Docker/runtime, API, data-integrity, and 1440/900/390 visual verification.
+
+### Gemini Assistant hardening — implementation complete, final verification pending
+
+- [x] Separate Assistant AI activation from homepage recommendations while preserving the legacy flag as a compatibility fallback.
+- [x] Add structured `BOOK_DETAILS`, `UNIVERSITY_INFO`, and `OUT_OF_SCOPE` classification with explicit Arabic/English intent rules.
+- [x] Add bounded `referencedBookIds`, `selectedBookId`, and `lastIntent` context for ordinal and continued Book follow-ups.
+- [x] Add a safe real-catalog Book explanation flow through the existing Python `google-genai` integration.
+- [x] Keep university facts trusted and deterministic, retain fixed read-only NestJS tool authority, and harden ambiguous fallback behavior.
+- [x] Extend Python, backend, database-backed, API-boundary, and rendered-widget tests without live Gemini quota usage.
+- [x] Diagnose the structured-output `400 INVALID_ARGUMENT` caused by the unsupported generated `additionalProperties` keyword and retain strict local output validation while removing only that Gemini-facing schema keyword.
+- [x] Use a minimal intent/query/reference schema and a separate validated Gemini academic-explanation call after `ACADEMIC_HELP` classification.
+- [x] Standardize every repository model default on environment-driven `gemini-3.5-flash-lite` and add redacted stage/status/error-category logging.
+- [x] Complete full checks, rebuilt Docker/runtime verification, six-prompt live-key smoke verification, and read-only data-integrity verification.
+
+### Gemini Assistant answer quality and presentation — implementation complete, final verification pending
+
+- [x] Replace raw academic paragraphs with validated `ACADEMIC_EXPLANATION` title, summary, three-to-five-point, optional example, and optional use-case fields.
+- [x] Replace generic Book-detail prose with validated `BOOK_EXPLANATION` overview, topics, cautious level/usefulness, evidence caveat, and the authoritative catalog Book.
+- [x] Strengthen Arabic-first concise teaching instructions, short-answer handling, safe mixed terminology, and no-fabricated-Book-content rules without changing Gemini connectivity.
+- [x] Render compact Delta University academic and Book explanation cards with RTL/plaintext handling and explicitly LTR examples.
+- [x] Add real bounded follow-up actions, contextual loading/error wording, and focused Python, NestJS, and React tests.
+- [x] Complete full repository, rebuilt Docker/runtime, live four-prompt, and 1440/900/390 visual verification.
+
 ### Later Phase 5 work — Not started
 
 - [ ] Phase 5.3.4: continue only from separately approved Member Area scope; do not infer pickup, notification, fine/payment, or broader dashboard authorization.
@@ -233,3 +278,13 @@ Phase 5 as a whole is **not complete**. Phase 5.1 does not implement reservation
 - [ ] Verify Docker build, migration/seed startup, health checks, and production-appropriate Nginx configuration.
 - [ ] Add GitHub Actions for lint, type checks, tests, builds, and Python validation.
 - [ ] Run final accessibility, Arabic RTL/LTR, performance, security, concurrency, and end-to-end verification; remove unused code.
+
+# Book Preview PDF feature
+
+- [x] Add optional Book-level PDF metadata and migration.
+- [x] Add local persisted storage abstraction and Docker volume.
+- [x] Add server validation, safe replacement/delete, RBAC, auditing, and authenticated streaming.
+- [x] Expose safe preview metadata on catalog responses.
+- [x] Add Book Details CTA, native viewer route/fallback, and librarian management controls.
+- [x] Add focused backend/frontend coverage and feature documentation.
+- [x] Verify migration, automated checks, Docker health, and responsive visual review in the current environment.

@@ -1,15 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { loginPath, safeReturnPath, type Role } from './auth/access';
-import { apiRequest, requestMessage } from './lib/api';
+import { apiRequest, apiUpload, requestMessage } from './lib/api';
 import { PublicCatalog } from './catalog/PublicCatalog';
 import { PublicHeader } from './catalog/PublicHeader';
 import { BookDetail } from './catalog/BookDetail';
+import { BookPreviewPage } from './catalog/BookPreviewPage';
+import { BookPreviewField, type PreviewMetadata } from './catalog/BookPreviewField';
 import { CampusPage } from './catalog/CampusPage';
 import { canAccessLoanRoute, isMemberLoanRoute, isStaffLoanRoute } from './loans/access';
 import { LoanRoute } from './loans/pages';
 import { MyReservationsRoute } from './reservations/MyReservationsPage';
 import { FacultiesPage } from './faculties/FacultiesPage';
+import { AssistantWidget } from './assistant/AssistantWidget';
 import {
   canManageRoute,
   managementListQuery,
@@ -75,6 +78,7 @@ type Book = {
   publisher?: Publisher;
   authors: Array<{ author: Author }>;
   copies?: Copy[];
+  preview?: PreviewMetadata;
 };
 type CatalogResult = { items: Book[]; total: number; page: number; totalPages: number };
 type CopyResult = { items: Copy[]; total: number; page: number; totalPages: number };
@@ -146,6 +150,7 @@ function App(): JSX.Element {
   const memberLoanRoute = isMemberLoanRoute(path);
   const loanRoute = staffLoanRoute || memberLoanRoute;
   const reservationRoute = path === '/my-reservations' || /^\/my-reservations\/[^/]+$/.test(path);
+  const previewMatch = path.match(/^\/books\/([^/]+)\/preview$/);
   let page: JSX.Element;
   if (path === '/auth/login') {
     const returnTo = safeReturnPath(
@@ -160,7 +165,31 @@ function App(): JSX.Element {
         onSuccess={() => go(returnTo)}
       />
     );
-  } else if (reservationRoute && !sessionReady)
+  } else if (previewMatch && !sessionReady)
+    page = (
+      <MemberRouteState
+        locale={arabic ? 'ar' : 'en'}
+        message={arabic ? 'جارٍ التحقق من حسابك…' : 'Checking your account…'}
+      />
+    );
+  else if (previewMatch && !session)
+    page = (
+      <AuthRedirect
+        go={go}
+        returnTo={`${path}${window.location.search}`}
+        locale={arabic ? 'ar' : 'en'}
+      />
+    );
+  else if (previewMatch)
+    page = (
+      <BookPreviewPage
+        slug={decodeURIComponent(previewMatch[1]!)}
+        token={session!.token}
+        locale={arabic ? 'ar' : 'en'}
+        go={go}
+      />
+    );
+  else if (reservationRoute && !sessionReady)
     page = (
       <MemberRouteState
         locale={arabic ? 'ar' : 'en'}
@@ -250,7 +279,15 @@ function App(): JSX.Element {
     path === '/librarian/books/create' ||
     /^\/librarian\/books\/[^/]+\/edit$/.test(path)
   )
-    page = <BooksManager path={path} token={session!.token} go={go} notify={setNotice} />;
+    page = (
+      <BooksManager
+        path={path}
+        token={session!.token}
+        locale={arabic ? 'ar' : 'en'}
+        go={go}
+        notify={setNotice}
+      />
+    );
   else if (
     path === '/librarian/book-copies' ||
     path === '/librarian/book-copies/create' ||
@@ -279,7 +316,14 @@ function App(): JSX.Element {
     );
   else if (path === '/campus') page = <CampusPage locale={arabic ? 'ar' : 'en'} go={go} />;
   else
-    page = <PublicCatalog locale={arabic ? 'ar' : 'en'} go={go} showFullCatalog={path !== '/'} />;
+    page = (
+      <PublicCatalog
+        locale={arabic ? 'ar' : 'en'}
+        go={go}
+        showFullCatalog={path !== '/'}
+        memberToken={session?.role === 'MEMBER' ? session.token : undefined}
+      />
+    );
   return (
     <div className="app-shell">
       <PublicHeader
@@ -302,6 +346,13 @@ function App(): JSX.Element {
         </div>
       )}
       <main>{page}</main>
+      {!management && !staffLoanRoute && (
+        <AssistantWidget
+          locale={arabic ? 'ar' : 'en'}
+          accessToken={session?.role === 'MEMBER' ? session.token : undefined}
+          go={go}
+        />
+      )}
     </div>
   );
 }
@@ -457,18 +508,21 @@ function LoginGate({
 function BooksManager({
   path,
   token,
+  locale,
   go,
   notify,
 }: {
   path: string;
   token: string;
+  locale: 'ar' | 'en';
   go: (to: string) => void;
   notify: (message: string) => void;
 }): JSX.Element {
   const editing = /^\/librarian\/books\/[^/]+\/edit$/.test(path);
   const creating = path.endsWith('/create');
   const id = editing ? path.split('/')[3]! : '';
-  if (creating || editing) return <BookForm id={id} token={token} go={go} notify={notify} />;
+  if (creating || editing)
+    return <BookForm id={id} token={token} locale={locale} go={go} notify={notify} />;
   return <BooksTable token={token} go={go} notify={notify} />;
 }
 
@@ -618,11 +672,13 @@ function BooksTable({
 function BookForm({
   id,
   token,
+  locale,
   go,
   notify,
 }: {
   id: string;
   token: string;
+  locale: 'ar' | 'en';
   go: (to: string) => void;
   notify: (message: string) => void;
 }): JSX.Element {
@@ -643,6 +699,14 @@ function BookForm({
     language: 'en',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [preview, setPreview] = useState<PreviewMetadata>({
+    available: false,
+    url: null,
+    originalName: null,
+    size: null,
+    updatedAt: null,
+  });
+  const [previewFile, setPreviewFile] = useState<File | null>(null);
   const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
   useEffect(() => {
@@ -655,7 +719,7 @@ function BookForm({
       .catch((reason: unknown) => setMessage(requestMessage(reason)));
     if (id)
       void apiRequest<Book>(`/books/${id}`)
-        .then((item) =>
+        .then((item) => {
           setBook({
             title: item.title,
             titleAr: item.titleAr || '',
@@ -666,8 +730,9 @@ function BookForm({
             isbn13: item.isbn13 || '',
             description: item.description || '',
             language: item.language,
-          }),
-        )
+          });
+          if (item.preview) setPreview(item.preview);
+        })
         .catch((reason: unknown) => setMessage(requestMessage(reason)));
   }, [id, token]);
   const submit = async (event: FormEvent) => {
@@ -685,11 +750,20 @@ function BookForm({
         isbn13: book.isbn13 || undefined,
         description: book.description || undefined,
       };
-      await apiRequest(
+      const saved = await apiRequest<Book>(
         id ? `/books/${id}` : '/books',
         { method: id ? 'PATCH' : 'POST', body: JSON.stringify(payload) },
         token,
       );
+      if (previewFile) {
+        const uploaded = await apiUpload<PreviewMetadata>(
+          `/books/${saved.id}/preview-pdf`,
+          previewFile,
+          token,
+        );
+        setPreview(uploaded);
+        setPreviewFile(null);
+      }
       notify(id ? 'Book updated.' : 'Book created.');
       go('/librarian/books');
     } catch (reason) {
@@ -796,6 +870,26 @@ function BookForm({
             onChange={(event) => setBook({ ...book, description: event.target.value })}
           />
         </Field>
+        <BookPreviewField
+          locale={locale}
+          bookId={id || undefined}
+          slug={book.slug || undefined}
+          token={token}
+          preview={preview}
+          selected={previewFile}
+          onSelect={setPreviewFile}
+          onRemoved={() => {
+            setPreview({
+              available: false,
+              url: null,
+              originalName: null,
+              size: null,
+              updatedAt: null,
+            });
+            notify(locale === 'ar' ? 'تم حذف ملف المعاينة.' : 'Preview PDF removed.');
+          }}
+          go={go}
+        />
         {message && (
           <p className="field-error" role="alert">
             {message}
