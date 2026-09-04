@@ -36,6 +36,8 @@ export type ReservationResult = {
   cancelledAt?: string | null;
   collectedAt?: string | null;
   canCancel?: boolean;
+  /** Returned only once, immediately after the authenticated member creates the reservation. */
+  pickupToken?: string;
 };
 
 export type ReservationFilter = 'active' | 'cancelled' | 'expired' | 'collected' | 'all';
@@ -84,6 +86,18 @@ export function cancelReservation(id: string, accessToken: string) {
   return apiRequest<ReservationResult>(
     `/reservations/${encodeURIComponent(id)}/cancel`,
     { method: 'POST' },
+    accessToken,
+  );
+}
+
+export function collectReservation(pickupToken: string, accessToken: string) {
+  return apiRequest<{
+    reservation: { id: string; status: ReservationStatus };
+    loanId: string;
+    dueAt: string;
+  }>(
+    '/reservations/collect-by-token',
+    { method: 'POST', body: JSON.stringify({ pickupToken }) },
     accessToken,
   );
 }

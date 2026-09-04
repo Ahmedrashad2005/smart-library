@@ -42,7 +42,8 @@ export function LibrarianDashboard({ token, locale, path, go, notify }: Props): 
   const [reservations, setReservations] = useState<ReservationResult | null>(null);
   const [status, setStatus] = useState('ACTIVE');
   const [error, setError] = useState('');
-  const [busy, setBusy] = useState('');
+  const [pickupToken, setPickupToken] = useState('');
+  const [collecting, setCollecting] = useState(false);
   const load = useCallback(async () => {
     setError('');
     try {
@@ -71,21 +72,28 @@ export function LibrarianDashboard({ token, locale, path, go, notify }: Props): 
   useEffect(() => {
     void load();
   }, [load]);
-  const pickup = async (id: string) => {
-    setBusy(id);
+  const pickup = async () => {
+    const tokenValue = pickupToken.trim();
+    if (!tokenValue || collecting) return;
+    setCollecting(true);
     setError('');
     try {
-      await apiRequest(`/reservations/${id}/confirm-pickup`, { method: 'POST' }, token);
+      await apiRequest(
+        '/reservations/collect-by-token',
+        { method: 'POST', body: JSON.stringify({ pickupToken: tokenValue }) },
+        token,
+      );
+      setPickupToken('');
       notify(
         locale === 'ar'
-          ? 'تم تأكيد الاستلام وإنشاء الإعارة.'
-          : 'Pickup confirmed and loan created.',
+          ? 'تم استلام الحجز وإنشاء الإعارة.'
+          : 'Reservation collected and loan created.',
       );
       await load();
     } catch (reason) {
       setError(requestMessage(reason));
     } finally {
-      setBusy('');
+      setCollecting(false);
     }
   };
   const cards: Array<{
@@ -195,6 +203,50 @@ export function LibrarianDashboard({ token, locale, path, go, notify }: Props): 
           {locale === 'ar' ? 'الإعارات' : 'Loans'}
         </button>
       </nav>
+      <section
+        className="librarian-section librarian-pickup"
+        aria-labelledby="librarian-pickup-title"
+      >
+        <div className="section-heading">
+          <div>
+            <h2 id="librarian-pickup-title">
+              {locale === 'ar' ? 'استلام حجز' : 'Collect reservation'}
+            </h2>
+            <p>
+              {locale === 'ar'
+                ? 'أدخل رمز الاستلام الذي يعرضه الطالب، ثم أكّد التحويل إلى إعارة.'
+                : 'Enter the pickup credential shown by the member, then confirm the loan.'}
+            </p>
+          </div>
+        </div>
+        <div className="librarian-pickup__form">
+          <label>
+            <span>{locale === 'ar' ? 'رمز الاستلام' : 'Pickup credential'}</span>
+            <input
+              value={pickupToken}
+              dir="ltr"
+              autoComplete="off"
+              onChange={(event) => setPickupToken(event.target.value)}
+              placeholder={locale === 'ar' ? 'أدخل الرمز يدويًا' : 'Enter credential manually'}
+            />
+          </label>
+          <button
+            className="button primary"
+            type="button"
+            disabled={!pickupToken.trim() || collecting}
+            aria-busy={collecting}
+            onClick={() => void pickup()}
+          >
+            {collecting
+              ? locale === 'ar'
+                ? 'جارٍ الاستلام…'
+                : 'Collecting…'
+              : locale === 'ar'
+                ? 'تأكيد الاستلام'
+                : 'Confirm collection'}
+          </button>
+        </div>
+      </section>
       {error && (
         <div className="state error" role="alert">
           <h2>{error}</h2>
@@ -308,19 +360,7 @@ export function LibrarianDashboard({ token, locale, path, go, notify }: Props): 
                           </small>
                         </td>
                         <td>
-                          {item.status === 'ACTIVE' && (
-                            <button
-                              className="button primary button--compact"
-                              disabled={busy === item.id}
-                              onClick={() => void pickup(item.id)}
-                            >
-                              {busy === item.id
-                                ? '…'
-                                : locale === 'ar'
-                                  ? 'تأكيد الاستلام'
-                                  : 'Confirm pickup'}
-                            </button>
-                          )}
+                          <span className="muted">—</span>
                         </td>
                       </tr>
                     ))}

@@ -14,8 +14,10 @@ describe('Phase 5.2.3 reservation query, cancellation, and expiration lifecycle'
   let reservations: ReservationsService;
   let firstMember: User;
   let secondMember: User;
+  let eligibleMember: User;
   let firstToken = '';
   let secondToken = '';
+  let eligibleToken = '';
   let librarianToken = '';
   let categoryId = '';
   let sectionId = '';
@@ -70,6 +72,11 @@ describe('Phase 5.2.3 reservation query, cancellation, and expiration lifecycle'
     api().post('/api/v1/reservations').set('Authorization', `Bearer ${token}`).send({ bookId });
   const cancel = (token: string, id: string) =>
     api().post(`/api/v1/reservations/${id}/cancel`).set('Authorization', `Bearer ${token}`);
+  const collect = (token: string, pickupToken: string) =>
+    api()
+      .post('/api/v1/reservations/collect-by-token')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ pickupToken });
 
   beforeAll(async () => {
     const module = await Test.createTestingModule({ imports: [AppModule] }).compile();
@@ -80,7 +87,7 @@ describe('Phase 5.2.3 reservation query, cancellation, and expiration lifecycle'
     await app.init();
     prisma = app.get(PrismaService);
     reservations = app.get(ReservationsService);
-    const [category, shelf, memberOne, memberFive] = await Promise.all([
+    const [category, shelf, memberOne, memberFive, memberTwo] = await Promise.all([
       prisma.category.findFirstOrThrow({ where: { isArchived: false, deletedAt: null } }),
       prisma.shelf.findFirstOrThrow({
         where: {
@@ -96,6 +103,7 @@ describe('Phase 5.2.3 reservation query, cancellation, and expiration lifecycle'
       }),
       prisma.user.findUniqueOrThrow({ where: { email: 'member1@smart-library.test' } }),
       prisma.user.findUniqueOrThrow({ where: { email: 'member5@smart-library.test' } }),
+      prisma.user.findUniqueOrThrow({ where: { email: 'member9@smart-library.test' } }),
     ]);
     categoryId = category.id;
     sectionId = shelf.sectionId;
@@ -103,9 +111,11 @@ describe('Phase 5.2.3 reservation query, cancellation, and expiration lifecycle'
     roomId = shelf.section.roomId!;
     firstMember = memberOne;
     secondMember = memberFive;
-    [firstToken, secondToken, librarianToken] = await Promise.all([
+    eligibleMember = memberTwo;
+    [firstToken, secondToken, eligibleToken, librarianToken] = await Promise.all([
       login(firstMember.email),
       login(secondMember.email),
+      login(eligibleMember.email),
       login('librarian1@smart-library.test'),
     ]);
   });
@@ -118,6 +128,10 @@ describe('Phase 5.2.3 reservation query, cancellation, and expiration lifecycle'
     if (records.length)
       await prisma.auditLog.deleteMany({
         where: { entityId: { in: records.map(({ id }) => id) } },
+      });
+    if (records.length)
+      await prisma.loan.deleteMany({
+        where: { reservationId: { in: records.map(({ id }) => id) } },
       });
     await prisma.reservation.deleteMany({ where: { book: { slug: { startsWith: suffix } } } });
     await prisma.bookCopy.deleteMany({ where: { book: { slug: { startsWith: suffix } } } });
@@ -615,5 +629,84 @@ describe('Phase 5.2.3 reservation query, cancellation, and expiration lifecycle'
         where: { action: 'RESERVATION_EXPIRED', entityId: original.body.id },
       }),
     ).toBe(1);
+  });
+
+  it('collects one valid pickup credential atomically into exactly one loan', async () => {
+    const { book, copies } = await createBook();
+    const created = await reserve(eligibleToken, book.id);
+    expect(created.status).toBe(201);
+    const pickupToken = created.body.pickupToken as string;
+    expect(pickupToken).toMatch(new RegExp(`^${created.body.id}\\.`));
+    const persistedBefore = await prisma.reservation.findUniqueOrThrow({
+      where: { id: created.body.id },
+    });
+    expect(persistedBefore.pickupTokenHash).toBeTruthy();
+    expect(persistedBefore.pickupTokenHash).not.toContain(pickupToken);
+
+    expect((await collect(eligibleToken, pickupToken)).status).toBe(403);
+    const response = await collect(librarianToken, pickupToken);
+    expect(response.status).toBe(201);
+    const [reservation, copy, loan, storedBook] = await Promise.all([
+      prisma.reservation.findUniqueOrThrow({ where: { id: created.body.id } }),
+      prisma.bookCopy.findUniqueOrThrow({ where: { id: copies[0]!.id } }),
+      prisma.loan.findMany({ where: { reservationId: created.body.id } }),
+      prisma.book.findUniqueOrThrow({ where: { id: book.id } }),
+    ]);
+    expect(reservation).toMatchObject({
+      status: ReservationStatus.COLLECTED,
+      collectedByUserId: expect.any(String),
+      collectedAt: expect.any(Date),
+    });
+    expect(copy.status).toBe(BookCopyStatus.BORROWED);
+    expect(loan).toHaveLength(1);
+    expect(loan[0]).toMatchObject({
+      memberId: eligibleMember.id,
+      bookCopyId: copies[0]!.id,
+      reservationId: created.body.id,
+      issuedById: reservation.collectedByUserId,
+    });
+    expect(storedBook.availableCopies).toBe(0);
+    expect(
+      await prisma.auditLog.count({
+        where: { action: 'RESERVATION_COLLECTED', entityId: created.body.id },
+      }),
+    ).toBe(1);
+    expect((await collect(librarianToken, pickupToken)).status).toBe(409);
+    expect(await prisma.loan.count({ where: { reservationId: created.body.id } })).toBe(1);
+  });
+
+  it('rejects invalid, expired, and concurrent collection without duplicate loans', async () => {
+    const invalidBook = await createBook();
+    const invalid = await reserve(eligibleToken, invalidBook.book.id);
+    expect(invalid.status).toBe(201);
+    const invalidToken = `${invalid.body.id}.${'a'.repeat(43)}`;
+    expect((await collect(librarianToken, invalidToken)).status).toBe(404);
+    expect(await prisma.loan.count({ where: { reservationId: invalid.body.id } })).toBe(0);
+
+    const expiredBook = await createBook();
+    const expired = await reserve(eligibleToken, expiredBook.book.id);
+    expect(expired.status).toBe(201);
+    await prisma.reservation.update({
+      where: { id: expired.body.id },
+      data: {
+        expiresAt: new Date(Date.now() - 1_000),
+        pickupTokenExpiresAt: new Date(Date.now() - 1_000),
+      },
+    });
+    expect((await collect(librarianToken, expired.body.pickupToken)).status).toBe(409);
+    expect(await prisma.loan.count({ where: { reservationId: expired.body.id } })).toBe(0);
+
+    const concurrentBook = await createBook();
+    const concurrent = await reserve(eligibleToken, concurrentBook.book.id);
+    expect(concurrent.status).toBe(201);
+    const results = await Promise.all([
+      collect(librarianToken, concurrent.body.pickupToken),
+      collect(librarianToken, concurrent.body.pickupToken),
+    ]);
+    expect(results.map((result) => result.status).sort()).toEqual([201, 409]);
+    expect(await prisma.loan.count({ where: { reservationId: concurrent.body.id } })).toBe(1);
+    expect(
+      (await prisma.reservation.findUniqueOrThrow({ where: { id: concurrent.body.id } })).status,
+    ).toBe(ReservationStatus.COLLECTED);
   });
 });

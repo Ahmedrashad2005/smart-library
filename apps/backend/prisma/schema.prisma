@@ -84,6 +84,7 @@ model User {
   issuedLoans         Loan[]                   @relation("LoanIssuer")
   returnedLoans       Loan[]                   @relation("LoanReturner")
   reservations        Reservation[]            @relation("ReservationMember")
+  collectedReservations Reservation[]          @relation("ReservationCollector")
 
   @@index([status])
   @@index([role])
@@ -430,6 +431,7 @@ model Loan {
   id              String             @id @default(uuid()) @db.Uuid
   memberId        String             @db.Uuid
   bookCopyId      String             @db.Uuid
+  reservationId   String?            @unique @db.Uuid
   borrowedAt      DateTime           @default(now())
   dueAt           DateTime
   returnedAt      DateTime?
@@ -446,6 +448,7 @@ model Loan {
   bookCopy        BookCopy           @relation(fields: [bookCopyId], references: [id], onDelete: Restrict)
   issuedBy        User               @relation("LoanIssuer", fields: [issuedById], references: [id], onDelete: Restrict)
   returnedBy      User?              @relation("LoanReturner", fields: [returnedById], references: [id], onDelete: Restrict)
+  reservation     Reservation?       @relation("ReservationLoan", fields: [reservationId], references: [id], onDelete: Restrict)
 
   @@index([memberId, returnedAt, dueAt])
   @@index([bookCopyId, returnedAt])
@@ -453,23 +456,29 @@ model Loan {
 }
 
 model Reservation {
-  id          String            @id @default(uuid()) @db.Uuid
-  memberId    String            @db.Uuid
-  bookId      String            @db.Uuid
-  bookCopyId  String            @db.Uuid
-  status      ReservationStatus @default(ACTIVE)
-  reservedAt  DateTime          @default(now())
-  expiresAt   DateTime
-  cancelledAt DateTime?
-  collectedAt DateTime?
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  member      User              @relation("ReservationMember", fields: [memberId], references: [id], onDelete: Restrict)
-  book        Book              @relation(fields: [bookId], references: [id], onDelete: Restrict)
-  bookCopy    BookCopy          @relation(fields: [bookCopyId], references: [id], onDelete: Restrict)
+  id                    String            @id @default(uuid()) @db.Uuid
+  memberId              String            @db.Uuid
+  bookId                String            @db.Uuid
+  bookCopyId            String            @db.Uuid
+  collectedByUserId     String?           @db.Uuid
+  pickupTokenHash       String?
+  pickupTokenExpiresAt  DateTime?
+  status                ReservationStatus @default(ACTIVE)
+  reservedAt            DateTime          @default(now())
+  expiresAt             DateTime
+  cancelledAt           DateTime?
+  collectedAt           DateTime?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  member                User              @relation("ReservationMember", fields: [memberId], references: [id], onDelete: Restrict)
+  collectedBy           User?             @relation("ReservationCollector", fields: [collectedByUserId], references: [id], onDelete: Restrict)
+  book                  Book              @relation(fields: [bookId], references: [id], onDelete: Restrict)
+  bookCopy              BookCopy          @relation(fields: [bookCopyId], references: [id], onDelete: Restrict)
+  loan                  Loan?             @relation("ReservationLoan")
 
   @@index([memberId, status, expiresAt])
   @@index([bookId, status, expiresAt])
   @@index([bookCopyId, status])
   @@index([status, expiresAt])
+  @@index([pickupTokenExpiresAt])
 }

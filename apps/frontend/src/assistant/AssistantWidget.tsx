@@ -77,7 +77,8 @@ const copy = {
     subtitle: 'Connected to the library catalog',
     welcomeTitle: 'Welcome',
     welcome: 'How may I assist you at Delta University Library?',
-    welcomeSupport: 'Search the catalog, review loans and reservations, or request a concise academic explanation.',
+    welcomeSupport:
+      'Search the catalog, review loans and reservations, or request a concise academic explanation.',
     close: 'Close assistant',
     input: 'Type your question…',
     send: 'Send question',

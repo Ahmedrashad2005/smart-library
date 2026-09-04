@@ -59,15 +59,14 @@ Phase 1 deliberately contains no domain schema, authentication, catalog, UI flow
 
 Reservations/waiting lists, fines, payments/waivers, notifications, recommendations, reviews, reports, and dashboards are outside the approved Phase 4 scope and remain unimplemented. The centralized loan policy has no administrator settings UI yet.
 
-
 ## Librarian Dashboard — Operational MVP
 
 - [x] Add a role-protected Arabic-first `/librarian` overview with real book, copy, loan, and reservation metrics.
 - [x] Reuse existing catalog, BookCopy, loan, preview, faculty, and master-data APIs and management components.
 - [x] Add librarian/admin reservation listing with safe member display fields and status filtering.
-- [x] Add atomic `POST /api/v1/reservations/:id/confirm-pickup`: ACTIVE reservation → COLLECTED reservation, BORROWED copy, and exactly one Loan, with invariant checks and audit logging.
+- [x] Add atomic `POST /api/v1/reservations/collect-by-token`: ACTIVE reservation → COLLECTED reservation, BORROWED copy, and exactly one linked Loan, with invariant checks and audit logging.
 - [x] Keep existing loan return workflow at `/librarian/returns`; no second loan lifecycle was introduced.
-- [ ] QR scanning, pickup tickets, payments/fines UI, notifications, advanced analytics, user management, and AI librarian workflows remain intentionally out of scope.
+- [ ] Payments/fines UI, notifications, advanced analytics, user management, and AI librarian workflows remain intentionally out of scope.
 
 ## Phase 5 — NAWA Campus and engagement — In progress
 
@@ -170,7 +169,7 @@ Phase 5.2.3 completes CREATE, QUERY, CANCEL, and EXPIRE only. Collection, pickup
 - [x] Cover malformed queries, foreign stale details, catalog bypasses, failed-row isolation, cancel/create, expiration/create, cancel/expiration, competing workers, and direct-Borrow rejection with real PostgreSQL-backed tests.
 - [x] Complete full Prisma, seed, format, lint, type-check, backend/frontend tests, build, diff, database-integrity, Campus-data, and Docker/runtime verification.
 
-Phase 5.2 is complete for the backend Reservation Engine lifecycle `CREATE`, `QUERY`, `CANCEL`, and `EXPIRE`. `COLLECTED` remains a future state only; no pickup, reservation-to-Loan conversion, QR/scanner, member reservation frontend, or notifications were started.
+Phase 5.2 is complete for the backend Reservation Engine lifecycle `CREATE`, `QUERY`, `CANCEL`, and `EXPIRE`. The next focused collection extension adds a one-time manual pickup credential and atomic Reservation-to-Loan conversion; notifications remain out of scope.
 
 ### Phase 5.3 — Student Reservation UX — In progress
 
@@ -218,6 +217,14 @@ Phase 5.3.2A remains the read-only foundation. Phase 5.3.2B adds Cancellation, D
 - [x] Verify keyboard behavior, duplicate-submit protection, Arabic RTL/English LTR, 1440/900/390 responsive layouts, privacy, full regressions, Docker health, and the unchanged real MEMBER Loan/Reservation fingerprint.
 
 Phase 5.3.3 is a member presentation and safe-response refinement only. It adds no pickup, QR/scanning, `COLLECTED`, Reservation-to-Loan conversion, fines, payments, notifications, or new circulation policy.
+
+#### Reservation Pickup / Collection → Loan — Complete
+
+- [x] Generate a cryptographically random one-time pickup credential, persist only its Argon2 hash, and return plaintext only to the authenticated owner at creation.
+- [x] Render the credential as text in the student creation confirmation, with no database/plaintext persistence or later query exposure.
+- [x] Add a LIBRARIAN/ADMIN manual collection control and `POST /api/v1/reservations/collect-by-token` API.
+- [x] In one locked serializable transaction, validate ticket/member/copy/overdue/limit state; transition `ACTIVE → COLLECTED` and `RESERVED → BORROWED`; create one linked Loan; synchronize counters; and write `RESERVATION_COLLECTED`.
+- [x] Add a unique `Loan.reservationId` database constraint and repeat/concurrent collection coverage.
 
 ### Focused AI recommendation MVP — verified complete
 

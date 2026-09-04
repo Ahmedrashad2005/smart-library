@@ -77,6 +77,7 @@ function reservation(overrides: Partial<ReservationResult> = {}): ReservationRes
       shelfLocationCode: '2/1',
     },
     availability: { totalCopies: 1, availableCopies: 0 },
+    pickupToken: 'reservation-1.a_secure_pickup_credential_value_123456',
     ...overrides,
   };
 }
@@ -142,6 +143,7 @@ describe('student reservation on the real Book Details page', () => {
     expect(await screen.findByRole('heading', { name: 'تم حجز الكتاب' })).toBeVisible();
     expect(screen.getByText('الدور الثالث · غرفة 315')).toBeVisible();
     expect(screen.getByText('CAMPUS-017')).toBeVisible();
+    expect(screen.getByText('reservation-1.a_secure_pickup_credential_value_123456')).toBeVisible();
     const expectedDeadline = new Intl.DateTimeFormat('ar-EG', {
       dateStyle: 'medium',
       timeStyle: 'short',

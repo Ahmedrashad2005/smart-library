@@ -1,10 +1,13 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import * as argon2 from 'argon2';
+import { randomBytes, randomUUID } from 'crypto';
 import {
   BookCopyCondition,
   BookCopyStatus,
@@ -91,7 +94,11 @@ export class ReservationsService {
       this.prisma.reservation.findMany({
         where,
         select: {
-          id: true, status: true, reservedAt: true, expiresAt: true, collectedAt: true,
+          id: true,
+          status: true,
+          reservedAt: true,
+          expiresAt: true,
+          collectedAt: true,
           book: { select: { id: true, title: true, titleAr: true, slug: true } },
           bookCopy: { select: { id: true, copyCode: true, status: true } },
           member: { select: { id: true, fullName: true, membershipNumber: true } },
@@ -105,41 +112,100 @@ export class ReservationsService {
     return { items, total, page: safePage, limit: take, totalPages: Math.ceil(total / take) };
   }
 
-  async confirmPickup(id: string, actor: Pick<User, 'id'>) {
-    return this.retry(() => this.prisma.$transaction(async (tx) => {
-      await tx.$queryRaw`SELECT "id" FROM "Reservation" WHERE "id" = CAST(${id} AS uuid) FOR UPDATE`;
-      const reservation = await tx.reservation.findUnique({
-        where: { id }, include: { book: true, bookCopy: true, member: true },
-      });
-      if (!reservation) throw new NotFoundException('Reservation not found');
-      if (reservation.status !== ReservationStatus.ACTIVE)
-        throw new ConflictException('Reservation is not active');
-      const now = new Date();
-      if (reservation.expiresAt <= now) throw new ConflictException('Reservation has expired');
-      await tx.$queryRaw`SELECT "id" FROM "BookCopy" WHERE "id" = CAST(${reservation.bookCopyId} AS uuid) FOR UPDATE`;
-      const copy = await tx.bookCopy.findUniqueOrThrow({ where: { id: reservation.bookCopyId } });
-      if (copy.status !== BookCopyStatus.RESERVED)
-        throw new ConflictException('Reserved copy is not available for pickup');
-      const activeLoans = await tx.loan.count({ where: { memberId: reservation.memberId, returnedAt: null } });
-      if (activeLoans >= this.loanPolicy.maxActiveLoans)
-        throw new ConflictException('Member has reached the active loan limit');
-      const duplicate = await tx.loan.findFirst({ where: { memberId: reservation.memberId, bookCopyId: copy.id, returnedAt: null } });
-      if (duplicate) throw new ConflictException('Member already has this copy on loan');
-      await tx.bookCopy.update({ where: { id: copy.id }, data: { status: BookCopyStatus.BORROWED } });
-      await this.catalog.sync(reservation.bookId, tx);
-      const loan = await tx.loan.create({
-        data: { memberId: reservation.memberId, bookCopyId: copy.id, issuedById: actor.id, dueAt: this.loanPolicy.dueDate(now) },
-      });
-      const collected = await tx.reservation.update({
-        where: { id }, data: { status: ReservationStatus.COLLECTED, collectedAt: now },
-      });
-      await tx.auditLog.create({
-        data: { action: 'RESERVATION_PICKUP_CONFIRMED', entityType: 'reservation', entityId: id, actorId: actor.id, targetUserId: reservation.memberId,
-          oldValues: { reservationStatus: ReservationStatus.ACTIVE, copyStatus: BookCopyStatus.RESERVED },
-          newValues: { reservationStatus: ReservationStatus.COLLECTED, copyStatus: BookCopyStatus.BORROWED, loanId: loan.id } },
-      });
-      return { reservation: collected, loanId: loan.id, dueAt: loan.dueAt };
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }));
+  async collectByToken(pickupToken: string, actor: Pick<User, 'id'>) {
+    const reservationId = this.reservationIdFromPickupToken(pickupToken);
+    return this.retry(() =>
+      this.prisma.$transaction(
+        async (tx) => {
+          if (!(await this.lockReservation(reservationId, tx, false)))
+            throw new NotFoundException('Reservation not found');
+          const reservation = await tx.reservation.findUnique({
+            where: { id: reservationId },
+            include: { book: true, bookCopy: true, member: true },
+          });
+          if (!reservation) throw new NotFoundException('Reservation not found');
+          if (!reservation.pickupTokenHash || !reservation.pickupTokenExpiresAt)
+            throw new NotFoundException('Reservation pickup credential not found');
+          if (!(await argon2.verify(reservation.pickupTokenHash, pickupToken)))
+            throw new NotFoundException('Reservation pickup credential not found');
+
+          const now = new Date();
+          if (
+            reservation.status !== ReservationStatus.ACTIVE ||
+            reservation.expiresAt <= now ||
+            reservation.pickupTokenExpiresAt <= now
+          )
+            throw new ConflictException('Reservation is no longer available for collection');
+          if (
+            reservation.member.role !== UserRole.MEMBER ||
+            reservation.member.status !== UserStatus.ACTIVE ||
+            !reservation.member.emailVerifiedAt ||
+            reservation.member.deletedAt
+          )
+            throw new ConflictException('Member is not eligible to borrow');
+
+          await tx.$queryRaw`SELECT "id" FROM "BookCopy" WHERE "id" = CAST(${reservation.bookCopyId} AS uuid) FOR UPDATE`;
+          const copy = await tx.bookCopy.findUnique({ where: { id: reservation.bookCopyId } });
+          if (!copy || copy.status !== BookCopyStatus.RESERVED)
+            throw new ConflictException('Reserved copy is not available for collection');
+
+          const activeLoans = await tx.loan.findMany({
+            where: { memberId: reservation.memberId, returnedAt: null },
+            select: { bookCopyId: true, dueAt: true },
+          });
+          if (activeLoans.some((loan) => loan.dueAt < now))
+            throw new ConflictException('Member has an overdue loan');
+          if (activeLoans.length >= this.loanPolicy.maxActiveLoans)
+            throw new ConflictException('Member has reached the active loan limit');
+          if (activeLoans.some((loan) => loan.bookCopyId === copy.id))
+            throw new ConflictException('Member already has this copy on loan');
+
+          await tx.bookCopy.update({
+            where: { id: copy.id },
+            data: { status: BookCopyStatus.BORROWED },
+          });
+          await this.catalog.sync(reservation.bookId, tx);
+          const loan = await tx.loan.create({
+            data: {
+              memberId: reservation.memberId,
+              bookCopyId: copy.id,
+              reservationId: reservation.id,
+              issuedById: actor.id,
+              dueAt: this.loanPolicy.dueDate(now),
+            },
+          });
+          const collected = await tx.reservation.update({
+            where: { id: reservation.id },
+            data: {
+              status: ReservationStatus.COLLECTED,
+              collectedAt: now,
+              collectedByUserId: actor.id,
+            },
+          });
+          await tx.auditLog.create({
+            data: {
+              action: 'RESERVATION_COLLECTED',
+              entityType: 'reservation',
+              entityId: reservation.id,
+              actorId: actor.id,
+              targetUserId: reservation.memberId,
+              oldValues: {
+                reservationStatus: ReservationStatus.ACTIVE,
+                copyStatus: BookCopyStatus.RESERVED,
+              },
+              newValues: {
+                reservationStatus: ReservationStatus.COLLECTED,
+                copyStatus: BookCopyStatus.BORROWED,
+                loanId: loan.id,
+                collectedAt: now.toISOString(),
+              },
+            },
+          });
+          return { reservation: collected, loanId: loan.id, dueAt: loan.dueAt };
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      ),
+    );
   }
 
   async create(dto: CreateReservationDto, actor: Pick<User, 'id'>) {
@@ -196,6 +262,9 @@ export class ReservationsService {
             if (!selected) throw new ConflictException('No available Campus copy for this book');
 
             const expiresAt = await this.policy.expiresAt(operationAt, tx);
+            const reservationId = randomUUID();
+            const pickupToken = `${reservationId}.${randomBytes(32).toString('base64url')}`;
+            const pickupTokenHash = await argon2.hash(pickupToken);
             await tx.bookCopy.update({
               where: { id: selected.id },
               data: { status: BookCopyStatus.RESERVED },
@@ -203,12 +272,15 @@ export class ReservationsService {
             await this.catalog.sync(book.id, tx);
             const reservation = await tx.reservation.create({
               data: {
+                id: reservationId,
                 memberId: member.id,
                 bookId: book.id,
                 bookCopyId: selected.id,
                 status: ReservationStatus.ACTIVE,
                 reservedAt: operationAt,
                 expiresAt,
+                pickupTokenHash,
+                pickupTokenExpiresAt: expiresAt,
               },
               include: reservationInclude,
             });
@@ -231,7 +303,7 @@ export class ReservationsService {
                 },
               },
             });
-            return this.present(reservation);
+            return this.present(reservation, pickupToken);
           },
           { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
         ),
@@ -496,6 +568,19 @@ export class ReservationsService {
     return rows.length === 1;
   }
 
+  private reservationIdFromPickupToken(pickupToken: string): string {
+    const [reservationId, secret, ...rest] = pickupToken.split('.');
+    if (!reservationId || !secret || rest.length || !/^[A-Za-z0-9_-]{32,}$/.test(secret))
+      throw new BadRequestException('Invalid pickup credential');
+    if (
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        reservationId,
+      )
+    )
+      throw new BadRequestException('Invalid pickup credential');
+    return reservationId;
+  }
+
   private async retry<T>(operation: () => Promise<T>): Promise<T> {
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
@@ -524,8 +609,9 @@ export class ReservationsService {
     return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
   }
 
-  private present(reservation: ReservationRecord) {
-    const { bookCopy, ...safeReservation } = reservation;
+  private present(reservation: ReservationRecord, pickupToken?: string) {
+    const { bookCopy, pickupTokenHash: _pickupTokenHash, ...safeReservation } = reservation;
+    void _pickupTokenHash;
     const room = bookCopy.homeLibraryRoom;
     return {
       ...safeReservation,
@@ -561,6 +647,7 @@ export class ReservationsService {
         totalCopies: reservation.book.totalCopies,
         availableCopies: reservation.book.availableCopies,
       },
+      ...(pickupToken ? { pickupToken } : {}),
     };
   }
 }

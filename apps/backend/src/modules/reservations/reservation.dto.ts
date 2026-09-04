@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import { ReservationStatus } from '@prisma/client';
-import { IsIn, IsInt, IsOptional, IsUUID, Max, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min } from 'class-validator';
 
 export class CreateReservationDto {
   @ApiProperty({
@@ -11,6 +11,15 @@ export class CreateReservationDto {
   })
   @IsUUID()
   bookId!: string;
+}
+
+export class CollectReservationDto {
+  @ApiProperty({
+    description: 'One-time pickup credential read from the member QR ticket or entered manually.',
+  })
+  @IsString()
+  @MaxLength(512)
+  pickupToken!: string;
 }
 
 export class ReservationQueryDto {

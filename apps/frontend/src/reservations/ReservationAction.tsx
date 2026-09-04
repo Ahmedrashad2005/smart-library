@@ -30,6 +30,8 @@ const copy = {
     pickup: 'مكان الاستلام',
     deadline: 'الحجز متاح حتى',
     copyCode: 'رمز النسخة',
+    pickupTicket: 'رمز الاستلام',
+    ticketHint: 'اعرض هذا الرمز يدويًا عند أمين المكتبة. لا تشاركه مع أي شخص.',
     status: 'حالة الحجز',
     browse: 'العودة إلى المكتبة الجامعية',
     duplicate: 'لديك حجز نشط لهذا الكتاب بالفعل.',
@@ -51,6 +53,8 @@ const copy = {
     pickup: 'Pickup location',
     deadline: 'Reservation available until',
     copyCode: 'Copy code',
+    pickupTicket: 'Pickup ticket',
+    ticketHint: 'Show this credential manually at the librarian desk. Do not share it.',
     status: 'Reservation status',
     browse: 'Back to the University Library',
     duplicate: 'You already have an active reservation for this book.',
@@ -174,6 +178,15 @@ export function ReservationAction({
             <dt>{labels.copyCode}</dt>
             <dd dir="ltr">{result.bookCopy.copyCode}</dd>
           </div>
+          {result.pickupToken && (
+            <div className="reservation-ticket">
+              <dt>{labels.pickupTicket}</dt>
+              <dd>
+                <code dir="ltr">{result.pickupToken}</code>
+                <small>{labels.ticketHint}</small>
+              </dd>
+            </div>
+          )}
         </dl>
         <button
           type="button"

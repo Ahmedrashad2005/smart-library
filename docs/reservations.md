@@ -2,9 +2,9 @@
 
 ## Purpose and boundaries
 
-A reservation is a member's temporary claim on one physical Campus `BookCopy` before pickup. It does not replace borrowing: `Loan` remains the source of truth only after a librarian completes physical pickup in a later phase.
+A reservation is a member's temporary claim on one physical Campus `BookCopy` before pickup. `Loan` becomes the source of truth only after a librarian or administrator completes the protected physical collection flow.
 
-Phase 5.2 is complete for the protected API lifecycle `CREATE`, `QUERY`, `CANCEL`, and `EXPIRE`. That backend phase itself introduced no Reserve button or member frontend, and still contains no pickup token, QR ticket, scanner, collection, Loan conversion, notification, payment, or checkout behavior.
+The Reservation Engine supports `CREATE`, `QUERY`, `CANCEL`, `EXPIRE`, and protected `COLLECT`. Collection adds no notifications, payments, checkout, or reminder behavior.
 
 ## Phase 5.3.1 student Reserve UX
 
@@ -46,7 +46,7 @@ Cancellation and the remaining-time treatment follow the established light NAWA 
 
 The member identity always comes from the validated access token. Librarians and administrators cannot use this member-self-service endpoint, and a client cannot nominate another member or a physical copy.
 
-The safe response contains the reservation timestamps/status, a display-safe book summary with cover and author display fields, the assigned copy's ID/code/status/condition, the Campus library/floor/room/section/shelf pickup location, and committed book availability. It excludes password/token fields, member private data, copy barcode/QR values, acquisition data, source-inventory metadata, and any pickup token.
+The safe response contains the reservation timestamps/status, a display-safe book summary with cover and author display fields, the assigned copy's ID/code/status/condition, the Campus library/floor/room/section/shelf pickup location, and committed book availability. Only the creation response for the authenticated owning member additionally contains `pickupToken`, a one-time plaintext credential. All later responses exclude it along with token hashes, member private data, copy barcode/QR values, acquisition data, and source-inventory metadata.
 
 Errors use the normal API contract:
 
@@ -118,7 +118,11 @@ Only genuine serializable/write-conflict and database deadlock signals (`P2034`,
 
 Catalog management cannot manufacture `RESERVED`, mutate/archive an actively reserved copy, or archive a book with an ACTIVE reservation. Reservation create/cancel/expire owns the copy transition, and the established catalog synchronizer recalculates counters inside the same transaction. Audit records participate in those transactions: `RESERVATION_CREATED` and `RESERVATION_CANCELLED` use the member actor, while `RESERVATION_EXPIRED` uses a null/system actor.
 
-Later pickup work must convert collection into `COLLECTED`, `BORROWED`, and a new Loan in one transaction.
+## Collection and pickup tickets
+
+`POST /api/v1/reservations/collect-by-token` is restricted to `LIBRARIAN` and `ADMIN`. It accepts `{ "pickupToken": "<reservation UUID>.<random secret>" }`, entered manually from the member pickup ticket. The database stores only an Argon2 hash of that credential.
+
+One serializable transaction locks the Reservation and BookCopy, verifies the credential and expiration, rechecks member eligibility, overdue loans, active-loan capacity, and copy state, then applies `ACTIVE → COLLECTED`, `RESERVED → BORROWED`, creates exactly one linked Loan, synchronizes book counters, and writes exactly one `RESERVATION_COLLECTED` audit entry. The unique `Loan.reservationId` constraint and row locking prevent repeat or concurrent scans from creating duplicate loans; any failure rolls the complete operation back.
 
 ## Expiration policy
 

@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { apiRequest } from '../lib/api';
-import { cancelReservation, createReservation, listMyReservations, reservationDetail } from './api';
+import {
+  cancelReservation,
+  collectReservation,
+  createReservation,
+  listMyReservations,
+  reservationDetail,
+} from './api';
 
 vi.mock('../lib/api', () => ({ apiRequest: vi.fn() }));
 
@@ -56,6 +62,16 @@ describe('reservation API boundary', () => {
       '/reservations/owned%2Fid/cancel',
       { method: 'POST' },
       'member-token',
+    );
+  });
+
+  it('sends only the scanned pickup credential when staff collect a reservation', async () => {
+    vi.mocked(apiRequest).mockResolvedValue({ loanId: 'loan', dueAt: '2030-01-01T00:00:00Z' });
+    await collectReservation('reservation-id.secure-ticket', 'staff-token');
+    expect(apiRequest).toHaveBeenCalledWith(
+      '/reservations/collect-by-token',
+      { method: 'POST', body: JSON.stringify({ pickupToken: 'reservation-id.secure-ticket' }) },
+      'staff-token',
     );
   });
 });

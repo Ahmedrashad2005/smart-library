@@ -922,89 +922,89 @@ function BookForm({
           </div>
           <div className="form-section__grid">
             <Field label={locale === 'ar' ? 'العنوان' : 'Title'} error={errors.title}>
-          <input
-            value={book.title}
-            onChange={(event) => setBook({ ...book, title: event.target.value })}
-            required
-          />
-        </Field>
+              <input
+                value={book.title}
+                onChange={(event) => setBook({ ...book, title: event.target.value })}
+                required
+              />
+            </Field>
             <Field label={locale === 'ar' ? 'العنوان بالعربية' : 'Arabic title'}>
-          <input
-            value={book.titleAr}
-            onChange={(event) => setBook({ ...book, titleAr: event.target.value })}
-          />
-        </Field>
+              <input
+                value={book.titleAr}
+                onChange={(event) => setBook({ ...book, titleAr: event.target.value })}
+              />
+            </Field>
             <Field label={locale === 'ar' ? 'المعرّف المختصر' : 'Slug'} error={errors.slug}>
-          <input
-            value={book.slug}
-            onChange={(event) => setBook({ ...book, slug: event.target.value })}
-            required
-          />
-        </Field>
-        <Field label="ISBN-13">
-          <input
-            value={book.isbn13}
-            onChange={(event) => setBook({ ...book, isbn13: event.target.value })}
-          />
-        </Field>
+              <input
+                value={book.slug}
+                onChange={(event) => setBook({ ...book, slug: event.target.value })}
+                required
+              />
+            </Field>
+            <Field label="ISBN-13">
+              <input
+                value={book.isbn13}
+                onChange={(event) => setBook({ ...book, isbn13: event.target.value })}
+              />
+            </Field>
             <Field label={locale === 'ar' ? 'التصنيف' : 'Category'} error={errors.categoryId}>
-          <select
-            value={book.categoryId}
-            onChange={(event) => setBook({ ...book, categoryId: event.target.value })}
-          >
+              <select
+                value={book.categoryId}
+                onChange={(event) => setBook({ ...book, categoryId: event.target.value })}
+              >
                 <option value="">{locale === 'ar' ? 'اختر التصنيف' : 'Choose category'}</option>
-            {masters.categories.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.nameEn}
-              </option>
-            ))}
-          </select>
-        </Field>
+                {masters.categories.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.nameEn}
+                  </option>
+                ))}
+              </select>
+            </Field>
             <Field label={locale === 'ar' ? 'الناشر' : 'Publisher'}>
-          <select
-            value={book.publisherId}
-            onChange={(event) => setBook({ ...book, publisherId: event.target.value })}
-          >
+              <select
+                value={book.publisherId}
+                onChange={(event) => setBook({ ...book, publisherId: event.target.value })}
+              >
                 <option value="">{locale === 'ar' ? 'بدون ناشر' : 'No publisher'}</option>
-            {masters.publishers.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-              </option>
-            ))}
-          </select>
-        </Field>
+                {masters.publishers.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
             <Field label={locale === 'ar' ? 'لغة الكتاب' : 'Language'}>
-          <select
-            value={book.language}
-            onChange={(event) => setBook({ ...book, language: event.target.value })}
-          >
+              <select
+                value={book.language}
+                onChange={(event) => setBook({ ...book, language: event.target.value })}
+              >
                 <option value="en">{locale === 'ar' ? 'الإنجليزية' : 'English'}</option>
                 <option value="ar">{locale === 'ar' ? 'العربية' : 'Arabic'}</option>
-          </select>
-        </Field>
+              </select>
+            </Field>
             <Field label={locale === 'ar' ? 'المؤلفون' : 'Authors'} error={errors.authorIds}>
-          <select
-            multiple
-            value={book.authorIds}
-            onChange={(event) =>
-              setBook({
-                ...book,
-                authorIds: Array.from(event.target.selectedOptions, (option) => option.value),
-              })
-            }
-          >
-            {masters.authors.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-              </option>
-            ))}
-          </select>
+              <select
+                multiple
+                value={book.authorIds}
+                onChange={(event) =>
+                  setBook({
+                    ...book,
+                    authorIds: Array.from(event.target.selectedOptions, (option) => option.value),
+                  })
+                }
+              >
+                {masters.authors.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
               <span className="hint">
                 {locale === 'ar'
                   ? 'يمكن اختيار أكثر من مؤلف باستخدام Ctrl/Cmd.'
                   : 'Use Ctrl/Cmd to select more than one author.'}
               </span>
-        </Field>
+            </Field>
           </div>
         </section>
         <section className="form-section">
@@ -1024,13 +1024,13 @@ function BookForm({
           </div>
           <div className="form-section__grid">
             <Field label={locale === 'ar' ? 'الوصف' : 'Description'} wide>
-          <textarea
-            value={book.description}
-            onChange={(event) => setBook({ ...book, description: event.target.value })}
-          />
-        </Field>
-        <Field label={locale === 'ar' ? 'غلاف الكتاب' : 'Book cover'}>
-          <div className="cover-upload-control">
+              <textarea
+                value={book.description}
+                onChange={(event) => setBook({ ...book, description: event.target.value })}
+              />
+            </Field>
+            <Field label={locale === 'ar' ? 'غلاف الكتاب' : 'Book cover'}>
+              <div className="cover-upload-control">
                 {coverUrl && (
                   <img
                     className="management-cover-preview"
@@ -1051,8 +1051,8 @@ function BookForm({
                       ? 'JPG أو PNG أو WebP، بحد أقصى 5 ميجابايت'
                       : 'JPG, PNG, or WebP, up to 5 MB'}
                 </span>
-          </div>
-        </Field>
+              </div>
+            </Field>
           </div>
         </section>
         <BookPreviewField
@@ -1243,7 +1243,7 @@ function CopiesTable({
                 <td>{copy.book?.title}</td>
                 <td>
                   <span className="metadata-ltr">
-                  {copy.section?.code || copy.sectionId} / {copy.shelf?.code || copy.shelfId}
+                    {copy.section?.code || copy.sectionId} / {copy.shelf?.code || copy.shelfId}
                   </span>
                 </td>
                 <td>
@@ -1543,48 +1543,48 @@ function CopyForm({
           </div>
           <div className="form-section__grid">
             <Field label={locale === 'ar' ? 'الكتاب' : 'Book'} error={errors.bookId}>
-          <select
-            disabled={!!id}
-            value={copy.bookId}
-            onChange={(event) => setCopy({ ...copy, bookId: event.target.value })}
-          >
+              <select
+                disabled={!!id}
+                value={copy.bookId}
+                onChange={(event) => setCopy({ ...copy, bookId: event.target.value })}
+              >
                 <option value="">{locale === 'ar' ? 'اختر الكتاب' : 'Choose book'}</option>
-            {masters.books.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.title}
-              </option>
-            ))}
-          </select>
-        </Field>
+                {masters.books.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.title}
+                  </option>
+                ))}
+              </select>
+            </Field>
             <Field label={locale === 'ar' ? 'القسم' : 'Section'} error={errors.sectionId}>
-          <select
-            value={copy.sectionId}
+              <select
+                value={copy.sectionId}
                 onChange={(event) =>
                   setCopy({ ...copy, sectionId: event.target.value, shelfId: '' })
                 }
-          >
+              >
                 <option value="">{locale === 'ar' ? 'اختر القسم' : 'Choose section'}</option>
-            {masters.sections.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.code} — {item.nameEn}
-              </option>
-            ))}
-          </select>
-        </Field>
+                {masters.sections.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.code} — {item.nameEn}
+                  </option>
+                ))}
+              </select>
+            </Field>
             <Field label={locale === 'ar' ? 'الرف' : 'Shelf'} error={errors.shelfId}>
-          <select
-            value={copy.shelfId}
-            disabled={!copy.sectionId}
-            onChange={(event) => setCopy({ ...copy, shelfId: event.target.value })}
-          >
+              <select
+                value={copy.shelfId}
+                disabled={!copy.sectionId}
+                onChange={(event) => setCopy({ ...copy, shelfId: event.target.value })}
+              >
                 <option value="">{locale === 'ar' ? 'اختر الرف' : 'Choose shelf'}</option>
-            {options.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.code} — {item.nameEn}
-              </option>
-            ))}
-          </select>
-        </Field>
+                {options.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.code} — {item.nameEn}
+                  </option>
+                ))}
+              </select>
+            </Field>
           </div>
         </section>
         <section className="form-section">
@@ -1606,44 +1606,44 @@ function CopyForm({
           </div>
           <div className="form-section__grid">
             <Field label={locale === 'ar' ? 'رمز النسخة' : 'Copy code'}>
-          <input
-            value={copy.copyCode}
-            disabled={!!id}
-            onChange={(event) => setCopy({ ...copy, copyCode: event.target.value })}
-          />
-        </Field>
+              <input
+                value={copy.copyCode}
+                disabled={!!id}
+                onChange={(event) => setCopy({ ...copy, copyCode: event.target.value })}
+              />
+            </Field>
             <Field label={locale === 'ar' ? 'الباركود' : 'Barcode'}>
-          <input
-            value={copy.barcode}
-            onChange={(event) => setCopy({ ...copy, barcode: event.target.value })}
-          />
-        </Field>
+              <input
+                value={copy.barcode}
+                onChange={(event) => setCopy({ ...copy, barcode: event.target.value })}
+              />
+            </Field>
             <Field label={locale === 'ar' ? 'الحالة' : 'Status'}>
-          <select
-            value={copy.status}
-            onChange={(event) => setCopy({ ...copy, status: event.target.value as CopyStatus })}
-          >
-            {statuses.map((item) => (
-              <option value={item} key={item}>
+              <select
+                value={copy.status}
+                onChange={(event) => setCopy({ ...copy, status: event.target.value as CopyStatus })}
+              >
+                {statuses.map((item) => (
+                  <option value={item} key={item}>
                     {copyStatusLabel(item, locale)}
-              </option>
-            ))}
-          </select>
-        </Field>
+                  </option>
+                ))}
+              </select>
+            </Field>
             <Field label={locale === 'ar' ? 'حالة النسخة' : 'Condition'}>
-          <select
-            value={copy.condition}
-            onChange={(event) =>
-              setCopy({ ...copy, condition: event.target.value as CopyCondition })
-            }
-          >
-            {conditions.map((item) => (
-              <option value={item} key={item}>
+              <select
+                value={copy.condition}
+                onChange={(event) =>
+                  setCopy({ ...copy, condition: event.target.value as CopyCondition })
+                }
+              >
+                {conditions.map((item) => (
+                  <option value={item} key={item}>
                     {copyConditionLabel(item, locale)}
-              </option>
-            ))}
-          </select>
-        </Field>
+                  </option>
+                ))}
+              </select>
+            </Field>
           </div>
         </section>
         {message && (

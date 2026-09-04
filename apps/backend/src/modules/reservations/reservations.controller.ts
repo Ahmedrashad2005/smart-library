@@ -24,7 +24,11 @@ import {
 import { UserRole } from '@prisma/client';
 import { CurrentUser, Roles } from '../../common/auth.decorators';
 import { JwtAuthGuard, RolesGuard } from '../../common/auth.guards';
-import { CreateReservationDto, ReservationQueryDto } from './reservation.dto';
+import {
+  CollectReservationDto,
+  CreateReservationDto,
+  ReservationQueryDto,
+} from './reservation.dto';
 import { ReservationsService } from './reservations.service';
 
 @ApiTags('Reservations')
@@ -37,7 +41,7 @@ export class ReservationsController {
   @ApiOperation({
     summary: 'Reserve one available physical Campus copy for the authenticated member.',
     description:
-      'Atomically assigns a Campus copy, marks it RESERVED, updates book availability, and creates an ACTIVE reservation. Pickup, cancellation, expiration processing, and QR tickets are not part of this endpoint.',
+      'Atomically assigns a Campus copy, marks it RESERVED, updates book availability, and creates an ACTIVE reservation. The response includes a one-time pickup credential only for this authenticated member.',
   })
   @ApiCreatedResponse({
     description:
@@ -61,15 +65,29 @@ export class ReservationsController {
   @ApiOperation({ summary: 'List reservations for librarian operations.' })
   @Roles(UserRole.LIBRARIAN, UserRole.ADMIN)
   @Get()
-  staffList(@Query() query: ReservationQueryDto, @Query('page') page?: string, @Query('limit') limit?: string) {
+  staffList(
+    @Query() query: ReservationQueryDto,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
     return this.reservations.staffList(query, Number(page ?? 1), Number(limit ?? 12));
   }
 
-  @ApiOperation({ summary: 'Confirm pickup and atomically create a loan.' })
+  @ApiOperation({
+    summary: 'Collect a reservation ticket and atomically create its one associated loan.',
+    description:
+      'LIBRARIAN and ADMIN only. The QR payload or manually entered one-time credential is verified without persisting its plaintext value.',
+  })
+  @ApiBadRequestResponse({ description: 'The pickup credential format is invalid.' })
+  @ApiConflictResponse({
+    description:
+      'The reservation is no longer active, expired, already collected, or its copy/member is ineligible.',
+  })
+  @ApiNotFoundResponse({ description: 'No reservation matches the pickup credential.' })
   @Roles(UserRole.LIBRARIAN, UserRole.ADMIN)
-  @Post(':id/confirm-pickup')
-  confirmPickup(@Param('id', new ParseUUIDPipe()) id: string, @CurrentUser() user: { id: string }) {
-    return this.reservations.confirmPickup(id, user);
+  @Post('collect-by-token')
+  collectByToken(@Body() dto: CollectReservationDto, @CurrentUser() user: { id: string }) {
+    return this.reservations.collectByToken(dto.pickupToken, user);
   }
 
   @ApiOperation({ summary: "List the authenticated member's reservations." })

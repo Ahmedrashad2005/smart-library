@@ -56,3 +56,9 @@ Both `smart_library` and isolated `smart_library_test` have all three migrations
 PostgreSQL partial unique indexes `Reservation_active_bookCopyId_key` and `Reservation_active_memberId_bookId_key` both use the exact predicate `WHERE status = 'ACTIVE'`. They preserve terminal history while allowing at most one ACTIVE reservation for a copy and at most one ACTIVE reservation for a member/book pair. Supporting indexes cover member/status/expiration history, book/status/expiration release checks, copy/status lookup, and the due `status/expiresAt` scan; the primary key covers detail lookup. No additional acceptance migration was needed.
 
 Create, cancel, and expire use serializable transactions, PostgreSQL row locks, the established catalog counter synchronizer, and in-transaction audit writes. Catalog management cannot assign `RESERVED`, mutate/archive an actively reserved copy, or archive its book; this keeps ACTIVE reservation state under the Reservation Engine's control. The pickup window is read from numeric `SystemSetting` key `reservation.pickupWindowHours`; seeded environments use 24 hours and the policy service has the same safe fallback.
+
+## Reservation pickup and collection
+
+The `reservation_pickup_collection` migration adds nullable `Reservation.pickupTokenHash`, `pickupTokenExpiresAt`, and `collectedByUserId`, plus a restrictive collector foreign key. Pickup secrets use cryptographic randomness and only their Argon2 hashes are persisted; the member presents the one-time credential manually.
+
+`Loan.reservationId` remains null for ordinary circulation but is unique for collection-created loans. With serializable Reservation/BookCopy locks, it ensures a collection cannot create two loans. A committed collection links the Loan, records collecting staff/time, transitions `ACTIVE → COLLECTED` and `RESERVED → BORROWED`, synchronizes counters, and writes its audit event in the same transaction.
