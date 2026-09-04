@@ -1,9 +1,13 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import type { Response } from 'express';
+import { pipeline } from 'stream/promises';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { CurrentUser, Public, Roles } from '../../common/auth.decorators';
 import { JwtAuthGuard, OptionalJwtAuthGuard, RolesGuard } from '../../common/auth.guards';
 import { CatalogService } from './catalog.service';
+import { BookCoverService, coverMaxBytes, type UploadedCoverFile } from './book-cover.service';
 import {
   CopyStatusDto,
   CreateBookDto,
@@ -14,7 +18,7 @@ import {
 @ApiTags('Catalog')
 @Controller()
 export class CatalogController {
-  constructor(private readonly catalog: CatalogService) {}
+  constructor(private readonly catalog: CatalogService, private readonly covers: BookCoverService) {}
   @Public()
   @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({ summary: 'Browse the catalog, including safe NAWA Campus discovery' })
@@ -111,6 +115,22 @@ export class CatalogController {
         }
       : null;
   }
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.LIBRARIAN, UserRole.ADMIN)
+  @UseInterceptors(FileInterceptor('file', { limits: { files: 1, fileSize: coverMaxBytes() } }))
+  @Post('books/:id/cover')
+  uploadCover(@Param('id') id: string, @UploadedFile() file: UploadedCoverFile | undefined, @CurrentUser() user: { id: string }) {
+    return this.covers.upload(id, file, user);
+  }
+
+  @Get('books/:id/cover/:key')
+  async cover(@Param('id') id: string, @Param('key') key: string, @Res() response: Response): Promise<void> {
+    const cover = await this.covers.stream(id, key);
+    response.set({ 'Content-Type': cover.mimeType, 'Content-Length': String(cover.size), 'Cache-Control': 'public, max-age=3600', 'Cross-Origin-Resource-Policy': 'cross-origin', 'X-Content-Type-Options': 'nosniff' });
+    await pipeline(cover.stream, response);
+  }
+
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.LIBRARIAN, UserRole.ADMIN)

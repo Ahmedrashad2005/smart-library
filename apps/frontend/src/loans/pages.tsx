@@ -112,7 +112,7 @@ function StaffLoanList({ token, staff, go, notify, mine }: Props & { mine: boole
     }
   };
   return (
-    <section className="page">
+    <section className="page librarian-page">
       <div className="page-heading">
         <div>
           <p className="eyebrow">{mine ? 'My circulation' : 'Circulation'}</p>
@@ -306,7 +306,7 @@ export function BorrowPage({ token, go, notify }: Props): JSX.Element {
     }
   };
   return (
-    <section className="page">
+    <section className="page librarian-page">
       <div className="page-heading">
         <div>
           <p className="eyebrow">Staff workflow</p>
@@ -523,7 +523,7 @@ export function ReturnsPage({ token, go, notify }: Props): JSX.Element {
     }
   };
   return (
-    <section className="page">
+    <section className="page librarian-page">
       <div className="page-heading">
         <div>
           <p className="eyebrow">Staff workflow</p>
@@ -703,19 +703,19 @@ function StaffLoanDetails({ id, token, staff, go, notify }: Props & { id: string
   }, [load]);
   if (!loan && !error)
     return (
-      <section className="page">
+      <section className="page librarian-page">
         <State title="Loading loan…" />
       </section>
     );
   if (error)
     return (
-      <section className="page">
+      <section className="page librarian-page">
         <State title={error} retry={() => void load()} />
       </section>
     );
   if (!loan)
     return (
-      <section className="page">
+      <section className="page librarian-page">
         <State title="Loan not found." />
       </section>
     );
@@ -735,7 +735,7 @@ function StaffLoanDetails({ id, token, staff, go, notify }: Props & { id: string
     }
   };
   return (
-    <section className="page detail">
+    <section className="page detail librarian-page">
       <button className="text-button" onClick={() => go(staff ? '/librarian/loans' : '/my-loans')}>
         ← Back
       </button>

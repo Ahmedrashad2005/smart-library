@@ -61,7 +61,7 @@ export function BookPreviewField(props: Props): JSX.Element {
   };
   return (
     <section className="book-preview-field form-wide" aria-labelledby="preview-pdf-heading">
-      <div>
+      <div className="book-preview-field__copy">
         <p className="book-preview-field__eyebrow">
           {ar ? 'أصل رقمي اختياري' : 'Optional digital asset'}
         </p>
@@ -79,6 +79,9 @@ export function BookPreviewField(props: Props): JSX.Element {
       </div>
       {preview.available && !selected && (
         <div className="book-preview-existing" role="status">
+          <span className="book-preview-existing__icon" aria-hidden="true">
+            PDF
+          </span>
           <strong>{ar ? 'تم رفع ملف معاينة' : 'Preview PDF uploaded'}</strong>
           <span>{preview.originalName}</span>
           {preview.size != null && <small>{(preview.size / 1024 / 1024).toFixed(1)} MB</small>}
@@ -86,6 +89,9 @@ export function BookPreviewField(props: Props): JSX.Element {
       )}
       {selected && (
         <div className="book-preview-existing" role="status">
+          <span className="book-preview-existing__icon" aria-hidden="true">
+            PDF
+          </span>
           <strong>{ar ? 'الملف المحدد' : 'Selected file'}</strong>
           <span>{selected.name}</span>
           <small>{(selected.size / 1024 / 1024).toFixed(1)} MB</small>

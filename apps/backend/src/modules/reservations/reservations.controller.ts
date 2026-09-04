@@ -58,6 +58,20 @@ export class ReservationsController {
     return this.reservations.create(dto, user);
   }
 
+  @ApiOperation({ summary: 'List reservations for librarian operations.' })
+  @Roles(UserRole.LIBRARIAN, UserRole.ADMIN)
+  @Get()
+  staffList(@Query() query: ReservationQueryDto, @Query('page') page?: string, @Query('limit') limit?: string) {
+    return this.reservations.staffList(query, Number(page ?? 1), Number(limit ?? 12));
+  }
+
+  @ApiOperation({ summary: 'Confirm pickup and atomically create a loan.' })
+  @Roles(UserRole.LIBRARIAN, UserRole.ADMIN)
+  @Post(':id/confirm-pickup')
+  confirmPickup(@Param('id', new ParseUUIDPipe()) id: string, @CurrentUser() user: { id: string }) {
+    return this.reservations.confirmPickup(id, user);
+  }
+
   @ApiOperation({ summary: "List the authenticated member's reservations." })
   @ApiOkResponse({
     description:

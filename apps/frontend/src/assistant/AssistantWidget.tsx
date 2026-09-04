@@ -26,47 +26,58 @@ type ChatMessage = {
 
 const copy = {
   ar: {
-    launcher: 'تحتاج مساعدة؟ أنا هنا للمساعدة',
-    launcherAction: 'افتح المساعد الذكي',
-    title: 'كيف أقدر أساعدك اليوم؟',
-    subtitle: 'مساعد مكتبة جامعة الدلتا',
-    welcome:
-      'أهلاً! أنا مساعد مكتبة جامعة الدلتا الذكي. أقدر أساعدك في البحث عن الكتب، الترشيحات، الإعارات والحجوزات، وكمان أسئلة دراسية بسيطة.',
+    launcher: 'المساعد الذكي للمكتبة',
+    launcherAction: 'فتح مساعد مكتبة جامعة الدلتا',
+    title: 'مساعد مكتبة جامعة الدلتا',
+    subtitle: 'متصل بفهرس المكتبة',
+    welcomeTitle: 'مرحبًا بك',
+    welcome: 'كيف يمكنني مساعدتك في مكتبة جامعة الدلتا؟',
+    welcomeSupport: 'يمكنك البحث في الفهرس، ومتابعة الإعارات والحجوزات، وطلب شرح أكاديمي مبسط.',
     close: 'إغلاق المساعد',
-    input: 'اكتب سؤالك هنا…',
-    send: 'إرسال السؤال',
-    thinking: 'بجهز لك الإجابة…',
-    thinkingAcademic: 'بجهز لك شرح مبسط…',
-    thinkingCatalog: 'بدور في فهرس مكتبة جامعة الدلتا…',
-    thinkingRecommendations: 'بختار لك كتب مناسبة…',
-    retry: 'واجهت مشكلة مؤقتة. جرّب مرة ثانية.',
-    retryAcademic: 'واجهت مشكلة مؤقتة أثناء تجهيز الشرح. جرّب مرة ثانية.',
-    retryCatalog: 'واجهت مشكلة مؤقتة أثناء البحث في فهرس المكتبة. جرّب مرة ثانية.',
-    quick: ['رشح لي كتاب', 'اعرض الكتب المتاحة', 'اعرض إعاراتي', 'اعرض حجوزاتي'],
+    input: 'اكتب استفسارك هنا…',
+    send: 'إرسال الاستفسار',
+    thinking: 'جارٍ إعداد الإجابة…',
+    thinkingAcademic: 'جارٍ إعداد شرح أكاديمي مبسط…',
+    thinkingCatalog: 'جارٍ البحث في فهرس مكتبة جامعة الدلتا…',
+    thinkingRecommendations: 'جارٍ اختيار الكتب المناسبة…',
+    thinkingLoans: 'جارٍ تحميل بيانات الإعارات…',
+    thinkingReservations: 'جارٍ تحميل بيانات الحجوزات…',
+    retry: 'تعذر إكمال الطلب مؤقتًا. يرجى المحاولة مرة أخرى.',
+    retryAcademic: 'تعذر إعداد الشرح مؤقتًا. يرجى المحاولة مرة أخرى.',
+    retryCatalog: 'تعذر البحث في فهرس المكتبة مؤقتًا. يرجى المحاولة مرة أخرى.',
+    quick: ['البحث عن كتاب', 'اقتراح كتاب', 'إعاراتي', 'حجوزاتي', 'شرح موضوع أكاديمي'],
     viewBook: 'عرض الكتاب',
     viewLoan: 'عرض الإعارة',
     viewReservation: 'عرض الحجز',
     signIn: 'تسجيل الدخول',
     available: 'متاح',
-    unavailable: 'غير متاح حاليًا',
+    unavailable: 'غير متاح',
     due: 'موعد الإرجاع',
     expires: 'ينتهي الحجز',
     quickDefinition: 'تعريف سريع',
     keyPoints: 'أهم النقاط',
     example: 'مثال مبسط',
-    useCase: 'لماذا يهم؟',
+    useCase: 'الأهمية التطبيقية',
     topics: 'موضوعات الكتاب',
     level: 'المستوى المناسب',
-    whyUseful: 'لماذا يفيدك؟',
+    whyUseful: 'الفائدة الأكاديمية',
+    overview: 'نبذة',
     catalogNote: 'ملاحظة عن المصدر',
+    activeContext: 'موضوع المحادثة',
+    emptyTitle: 'لم يتم العثور على نتائج مناسبة',
+    emptySupport: 'يمكنك توسيع نطاق الموضوع أو البحث باستخدام اسم كتاب محدد.',
+    broaderTopic: 'البحث بموضوع أوسع',
+    searchByTitle: 'البحث باسم الكتاب',
+    errorTitle: 'تعذر إكمال الطلب',
   },
   en: {
-    launcher: 'Need help? I am here for you',
-    launcherAction: 'Open the AI assistant',
-    title: 'How can I help today?',
-    subtitle: 'Delta University Library Assistant',
-    welcome:
-      'Welcome! I can help you search the Delta University Library, find recommendations, review loans and reservations, and answer simple study questions.',
+    launcher: 'Library AI Assistant',
+    launcherAction: 'Open the Delta University Library Assistant',
+    title: 'Delta University Library Assistant',
+    subtitle: 'Connected to the library catalog',
+    welcomeTitle: 'Welcome',
+    welcome: 'How may I assist you at Delta University Library?',
+    welcomeSupport: 'Search the catalog, review loans and reservations, or request a concise academic explanation.',
     close: 'Close assistant',
     input: 'Type your question…',
     send: 'Send question',
@@ -74,10 +85,12 @@ const copy = {
     thinkingAcademic: 'Preparing a simple explanation…',
     thinkingCatalog: 'Searching the Delta University Library catalog…',
     thinkingRecommendations: 'Choosing suitable books…',
+    thinkingLoans: 'Loading your loans…',
+    thinkingReservations: 'Loading your reservations…',
     retry: 'I encountered a temporary problem. Please try again.',
     retryAcademic: 'I encountered a temporary problem while preparing the explanation. Try again.',
     retryCatalog: 'I encountered a temporary catalog search problem. Try again.',
-    quick: ['Recommend a book', 'Show available books', 'Show my loans', 'Show my reservations'],
+    quick: ['Find a book', 'Recommend a book', 'My loans', 'My reservations', 'Explain a topic'],
     viewBook: 'View book',
     viewLoan: 'View loan',
     viewReservation: 'View reservation',
@@ -93,7 +106,14 @@ const copy = {
     topics: 'Book topics',
     level: 'Suitable level',
     whyUseful: 'Why it may help',
+    overview: 'Overview',
     catalogNote: 'Source note',
+    activeContext: 'Discussing',
+    emptyTitle: 'No suitable results',
+    emptySupport: 'Try a broader subject or search for a specific book title.',
+    broaderTopic: 'Try a broader topic',
+    searchByTitle: 'Search by book title',
+    errorTitle: 'Could not complete the request',
   },
 } as const;
 
@@ -162,8 +182,19 @@ export function AssistantWidget({ locale, accessToken, go }: Props): JSX.Element
   const conversationContext = () =>
     [...messages].reverse().find(({ response }) => response?.context)?.response?.context;
 
+  const activeBook = (() => {
+    const selectedBookId = conversationContext()?.selectedBookId;
+    if (!selectedBookId) return undefined;
+    return [...messages]
+      .reverse()
+      .flatMap(({ response }) => response?.books ?? [])
+      .find(({ id }) => id === selectedBookId);
+  })();
+
   const loadingFor = (message: string) => {
     if (/رشح|اقترح|recommend|suggest/i.test(message)) return labels.thinkingRecommendations;
+    if (/حجوز|reservations?/i.test(message)) return labels.thinkingReservations;
+    if (/إعارات|اعارات|مستعار|loans?|borrowed/i.test(message)) return labels.thinkingLoans;
     if (/كتاب|كتب|فهرس|ابحث|دور|book|catalog|search|find/i.test(message))
       return labels.thinkingCatalog;
     if (/اشرح|يعني|الفرق|explain|difference|what is/i.test(message)) return labels.thinkingAcademic;
@@ -216,7 +247,10 @@ export function AssistantWidget({ locale, accessToken, go }: Props): JSX.Element
     } finally {
       pendingRef.current = false;
       setPending(false);
-      requestAnimationFrame(() => inputRef.current?.focus());
+      requestAnimationFrame(() => {
+        if (inputRef.current) inputRef.current.style.height = '';
+        inputRef.current?.focus();
+      });
     }
   };
 
@@ -246,55 +280,72 @@ export function AssistantWidget({ locale, accessToken, go }: Props): JSX.Element
     >
       <header className="assistant-panel__header">
         <AssistantMark />
-        <div>
+        <div className="assistant-panel__identity">
           <h2 id="assistant-title">{labels.title}</h2>
-          <p>{labels.subtitle}</p>
+          <p>
+            <span aria-hidden="true" />
+            {labels.subtitle}
+          </p>
         </div>
         <button type="button" className="assistant-close" aria-label={labels.close} onClick={close}>
           ×
         </button>
       </header>
       <div className="assistant-conversation" ref={conversationRef} aria-live="polite">
-        <div className="assistant-message assistant-message--welcome">
-          <p>{labels.welcome}</p>
-        </div>
         {!messages.length && (
-          <div
-            className="assistant-quick-actions"
-            aria-label={locale === 'ar' ? 'إجراءات سريعة' : 'Quick actions'}
-          >
-            {labels.quick.map((label, index) => (
-              <button
-                key={label}
-                type="button"
-                onClick={() => void submit(label)}
-                disabled={pending}
-              >
-                <span aria-hidden="true">{['✦', '⌕', '↗', '◷'][index]}</span>
-                {label}
-              </button>
-            ))}
-          </div>
+          <section className="assistant-welcome" aria-labelledby="assistant-welcome-title">
+            <p className="assistant-welcome__eyebrow">{labels.welcomeTitle}</p>
+            <h3 id="assistant-welcome-title">{labels.welcome}</h3>
+            <p>{labels.welcomeSupport}</p>
+            <div
+              className="assistant-quick-actions"
+              aria-label={locale === 'ar' ? 'إجراءات سريعة' : 'Quick actions'}
+            >
+              {labels.quick.map((label, index) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => void submit(label)}
+                  disabled={pending}
+                >
+                  <AssistantQuickIcon index={index} />
+                  {label}
+                </button>
+              ))}
+            </div>
+          </section>
         )}
         {messages.map((message) => (
           <div
             key={message.id}
-            className={`assistant-message assistant-message--${message.role}${message.response && ['ACADEMIC_EXPLANATION', 'BOOK_EXPLANATION'].includes(message.response.type) ? ' assistant-message--structured' : ''}`}
+            className={`assistant-message assistant-message--${message.role}${message.response && usesDedicatedPresentation(message.response) ? ' assistant-message--structured' : ''}`}
           >
-            {(!message.response ||
-              !['ACADEMIC_EXPLANATION', 'BOOK_EXPLANATION'].includes(message.response.type)) && (
-              <p>{message.content}</p>
+            {message.role === 'assistant' && (
+              <span className="assistant-message__mark" aria-hidden="true">
+                <AssistantMark />
+              </span>
             )}
-            {message.response && (
-              <AssistantRichResult
-                result={message.response}
-                locale={locale}
-                labels={labels}
-                go={go}
-                submit={(value) => void submit(value)}
-                login={() => go(loginPath(`${window.location.pathname}${window.location.search}`))}
-              />
-            )}
+            <div className="assistant-message__content">
+              {(!message.response || !usesDedicatedPresentation(message.response)) && (
+                <p dir="auto">{message.content}</p>
+              )}
+              {message.response && (
+                <AssistantRichResult
+                  result={message.response}
+                  locale={locale}
+                  labels={labels}
+                  go={go}
+                  submit={(value) => void submit(value)}
+                  draft={(value) => {
+                    setInput(value);
+                    requestAnimationFrame(() => inputRef.current?.focus());
+                  }}
+                  login={() =>
+                    go(loginPath(`${window.location.pathname}${window.location.search}`))
+                  }
+                />
+              )}
+            </div>
           </div>
         ))}
         {pending && (
@@ -308,35 +359,51 @@ export function AssistantWidget({ locale, accessToken, go }: Props): JSX.Element
           </div>
         )}
       </div>
-      <form
-        className="assistant-composer"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void submit();
-        }}
-      >
-        <label className="sr-only" htmlFor="assistant-input">
-          {labels.input}
-        </label>
-        <textarea
-          ref={inputRef}
-          id="assistant-input"
-          rows={1}
-          maxLength={1000}
-          value={input}
-          placeholder={labels.input}
-          onChange={(event) => setInput(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' && !event.shiftKey) {
-              event.preventDefault();
-              void submit();
-            }
+      <div className="assistant-composer-shell">
+        {activeBook && (
+          <div className="assistant-active-context" role="status">
+            <span aria-hidden="true">●</span>
+            {labels.activeContext}:{' '}
+            <bdi>{locale === 'ar' ? activeBook.titleAr || activeBook.title : activeBook.title}</bdi>
+          </div>
+        )}
+        <form
+          className="assistant-composer"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void submit();
           }}
-        />
-        <button type="submit" aria-label={labels.send} disabled={pending || !input.trim()}>
-          <span aria-hidden="true">➤</span>
-        </button>
-      </form>
+        >
+          <label className="sr-only" htmlFor="assistant-input">
+            {labels.input}
+          </label>
+          <textarea
+            ref={inputRef}
+            id="assistant-input"
+            dir="auto"
+            rows={1}
+            maxLength={1000}
+            value={input}
+            placeholder={labels.input}
+            onChange={(event) => {
+              setInput(event.target.value);
+              event.currentTarget.style.height = 'auto';
+              event.currentTarget.style.height = `${Math.min(event.currentTarget.scrollHeight, 112)}px`;
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                void submit();
+              }
+            }}
+          />
+          <button type="submit" aria-label={labels.send} disabled={pending || !input.trim()}>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m5 12 14-7-4.6 14-2.8-5.6L5 12Z" />
+            </svg>
+          </button>
+        </form>
+      </div>
     </aside>
   );
 }
@@ -347,6 +414,7 @@ function AssistantRichResult({
   labels,
   go,
   submit,
+  draft,
   login,
 }: {
   result: AssistantResponse;
@@ -354,8 +422,53 @@ function AssistantRichResult({
   labels: (typeof copy)[PublicLocale];
   go: (to: string) => void;
   submit: (value: string) => void;
+  draft: (value: string) => void;
   login: () => void;
 }): JSX.Element | null {
+  if (result.type === 'ERROR')
+    return (
+      <section className="assistant-feedback assistant-feedback--error" role="alert">
+        <span className="assistant-feedback__icon" aria-hidden="true">
+          !
+        </span>
+        <div>
+          <h3>{labels.errorTitle}</h3>
+          <p dir="auto">{result.message}</p>
+        </div>
+      </section>
+    );
+  if (result.type === 'BOOK_SEARCH_RESULTS' && !result.books?.length)
+    return (
+      <section
+        className="assistant-feedback assistant-feedback--empty"
+        aria-labelledby="assistant-empty-title"
+      >
+        <span className="assistant-feedback__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11a3 3 0 0 1 3 3v14a3 3 0 0 0-3-3H4V5.5Zm16 11.5h-3a3 3 0 0 0-3 3V6a3 3 0 0 1 3-3h.5A2.5 2.5 0 0 1 20 5.5V17Z" />
+          </svg>
+        </span>
+        <div>
+          <h3 id="assistant-empty-title">{labels.emptyTitle}</h3>
+          <p dir="auto">{result.message}</p>
+          <small>{labels.emptySupport}</small>
+          <div className="assistant-feedback__actions">
+            <button
+              type="button"
+              onClick={() => draft(locale === 'ar' ? 'أبحث عن كتب حول ' : 'Find books about ')}
+            >
+              {labels.broaderTopic}
+            </button>
+            <button
+              type="button"
+              onClick={() => draft(locale === 'ar' ? 'البحث عن كتاب بعنوان ' : 'Find the book ')}
+            >
+              {labels.searchByTitle}
+            </button>
+          </div>
+        </div>
+      </section>
+    );
   if (result.type === 'LOGIN_REQUIRED')
     return (
       <button className="assistant-inline-action" onClick={login}>
@@ -389,40 +502,38 @@ function AssistantRichResult({
         <AssistantBookCard key={book.id} book={book} locale={locale} labels={labels} go={go} />
       ))}
       {result.loans?.map((loan) => (
-        <article className="assistant-activity-card" key={loan.id}>
-          <strong>
-            {locale === 'ar'
+        <AssistantActivityCard
+          key={loan.id}
+          title={
+            locale === 'ar'
               ? loan.bookCopy.book.titleAr || loan.bookCopy.book.title
-              : loan.bookCopy.book.title}
-          </strong>
-          <span>{loan.effectiveStatus}</span>
-          <small>
-            {labels.due}:{' '}
-            <bdi>
-              {new Date(loan.dueAt).toLocaleDateString(locale === 'ar' ? 'ar-EG' : 'en-GB')}
-            </bdi>
-          </small>
-          <button onClick={() => go(`/my-loans/${loan.id}`)}>{labels.viewLoan}</button>
-        </article>
+              : loan.bookCopy.book.title
+          }
+          status={localizedLoanStatus[locale][loan.effectiveStatus]}
+          statusKey={loan.effectiveStatus}
+          dateLabel={labels.due}
+          date={loan.dueAt}
+          locale={locale}
+          actionLabel={labels.viewLoan}
+          onAction={() => go(`/my-loans/${loan.id}`)}
+        />
       ))}
       {result.reservations?.map((reservation) => (
-        <article className="assistant-activity-card" key={reservation.id}>
-          <strong>
-            {locale === 'ar'
+        <AssistantActivityCard
+          key={reservation.id}
+          title={
+            locale === 'ar'
               ? reservation.book.titleAr || reservation.book.title
-              : reservation.book.title}
-          </strong>
-          <span>{reservation.status}</span>
-          <small>
-            {labels.expires}:{' '}
-            <bdi>
-              {new Date(reservation.expiresAt).toLocaleString(locale === 'ar' ? 'ar-EG' : 'en-GB')}
-            </bdi>
-          </small>
-          <button onClick={() => go(`/my-reservations/${reservation.id}`)}>
-            {labels.viewReservation}
-          </button>
-        </article>
+              : reservation.book.title
+          }
+          status={localizedReservationStatus[locale][reservation.status]}
+          statusKey={reservation.status}
+          dateLabel={labels.expires}
+          date={reservation.expiresAt}
+          locale={locale}
+          actionLabel={labels.viewReservation}
+          onAction={() => go(`/my-reservations/${reservation.id}`)}
+        />
       ))}
     </>
   );
@@ -541,13 +652,16 @@ function AssistantBookExplanationCard({
         <div>
           <h3 dir="auto">{title}</h3>
           {author && <p dir="auto">{author}</p>}
-          <span className={availableCopies > 0 ? 'is-available' : 'is-unavailable'}>
+          <span
+            className={`assistant-status-chip ${availableCopies > 0 ? 'is-available' : 'is-unavailable'}`}
+          >
+            <i aria-hidden="true" />
             {availableCopies > 0 ? labels.available : labels.unavailable}
           </span>
         </div>
       </header>
-      <section aria-label={labels.quickDefinition}>
-        <h4>{labels.quickDefinition}</h4>
+      <section aria-label={labels.overview}>
+        <h4>{labels.overview}</h4>
         <p dir="auto">{result.overview}</p>
       </section>
       {Boolean(result.topics?.length) && (
@@ -668,11 +782,97 @@ function AssistantBookCard({
         {(book.semanticReason || book.reason) && (
           <p dir="auto">{book.semanticReason || book.reason}</p>
         )}
-        <span className={available ? 'is-available' : 'is-unavailable'}>
-          {available ? labels.available : labels.unavailable}
-        </span>
-        <button onClick={() => go(`/books/${book.slug}`)}>{labels.viewBook}</button>
+        <div className="assistant-book-card__footer">
+          <span
+            className={`assistant-status-chip ${available ? 'is-available' : 'is-unavailable'}`}
+          >
+            <i aria-hidden="true" />
+            {available ? labels.available : labels.unavailable}
+          </span>
+          <button onClick={() => go(`/books/${book.slug}`)}>{labels.viewBook}</button>
+        </div>
       </div>
     </article>
   );
+}
+
+function usesDedicatedPresentation(result: AssistantResponse): boolean {
+  return (
+    result.type === 'ACADEMIC_EXPLANATION' ||
+    result.type === 'BOOK_EXPLANATION' ||
+    result.type === 'ERROR' ||
+    (result.type === 'BOOK_SEARCH_RESULTS' && !result.books?.length)
+  );
+}
+
+function AssistantQuickIcon({ index }: { index: number }): JSX.Element {
+  const paths = [
+    'M4 5.5A2.5 2.5 0 0 1 6.5 3H11a3 3 0 0 1 3 3v14a3 3 0 0 0-3-3H4V5.5Zm16 11.5h-3a3 3 0 0 0-3 3V6a3 3 0 0 1 3-3h.5A2.5 2.5 0 0 1 20 5.5V17Z',
+    'm12 3 1.3 4.2L17.5 8.5l-4.2 1.3L12 14l-1.3-4.2-4.2-1.3 4.2-1.3L12 3Zm6 11 .7 2.3L21 17l-2.3.7L18 20l-.7-2.3L15 17l2.3-.7L18 14Z',
+    'M5 7h14M7 3v4m10-4v4M5 7v12h14V7M8 11h3m2 0h3m-8 4h3',
+    'M6 4h12v16H6V4Zm3 4h6m-6 4h6m-6 4h4',
+    'M12 3a6 6 0 0 0-3.5 10.9c.8.6 1.5 1.4 1.5 2.4V17h4v-.7c0-1 .7-1.8 1.5-2.4A6 6 0 0 0 12 3Zm-2 17h4',
+  ];
+  return (
+    <svg className="assistant-quick-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d={paths[index] ?? paths[0]} />
+    </svg>
+  );
+}
+
+const localizedLoanStatus = {
+  ar: { ACTIVE: 'نشط', OVERDUE: 'متأخر', RETURNED: 'تم الإرجاع' },
+  en: { ACTIVE: 'Active', OVERDUE: 'Overdue', RETURNED: 'Returned' },
+} as const;
+
+const localizedReservationStatus = {
+  ar: { ACTIVE: 'نشط', CANCELLED: 'ملغي', EXPIRED: 'منتهي', COLLECTED: 'تم الاستلام' },
+  en: { ACTIVE: 'Active', CANCELLED: 'Cancelled', EXPIRED: 'Expired', COLLECTED: 'Collected' },
+} as const;
+
+function AssistantActivityCard({
+  title,
+  status,
+  statusKey,
+  dateLabel,
+  date,
+  locale,
+  actionLabel,
+  onAction,
+}: {
+  title: string;
+  status: string;
+  statusKey: string;
+  dateLabel: string;
+  date: string;
+  locale: PublicLocale;
+  actionLabel: string;
+  onAction: () => void;
+}): JSX.Element {
+  return (
+    <article className="assistant-activity-card">
+      <div>
+        <strong dir="auto">{title}</strong>
+        <span className={`assistant-status-chip is-${statusKey.toLowerCase()}`}>
+          <i aria-hidden="true" />
+          {status}
+        </span>
+      </div>
+      <small>
+        {dateLabel}: <bdi>{formatAssistantDate(date, locale)}</bdi>
+      </small>
+      <button type="button" onClick={onAction}>
+        {actionLabel}
+      </button>
+    </article>
+  );
+}
+
+function formatAssistantDate(value: string, locale: PublicLocale): string {
+  return new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    ...(value.includes('T') ? { hour: 'numeric', minute: '2-digit' } : {}),
+  }).format(new Date(value));
 }

@@ -62,7 +62,7 @@ describe('Delta University Library AI Assistant widget', () => {
   it('opens a real named dialog and moves focus to the composer', async () => {
     const { user } = setup();
     await user.click(screen.getByRole('button', { name: 'افتح المساعد الذكي' }));
-    expect(screen.getByRole('dialog', { name: 'كيف أقدر أساعدك اليوم؟' })).toBeVisible();
+    expect(screen.getByRole('dialog', { name: 'مساعد مكتبة جامعة الدلتا' })).toBeVisible();
     expect(screen.getByLabelText('اكتب سؤالك هنا…')).toHaveFocus();
   });
 
@@ -84,21 +84,23 @@ describe('Delta University Library AI Assistant widget', () => {
   it('renders the Arabic welcome state', async () => {
     const { user } = setup();
     await user.click(screen.getByRole('button', { name: 'افتح المساعد الذكي' }));
-    expect(screen.getByText(/أنا مساعد مكتبة جامعة الدلتا الذكي/)).toBeVisible();
+    expect(screen.getByText('أهلًا 👋')).toBeVisible();
+    expect(screen.getByText('كيف أقدر أساعدك في مكتبة جامعة الدلتا؟')).toBeVisible();
+    expect(screen.getByText(/ابحث في الفهرس/)).toBeVisible();
   });
 
-  it('renders four functional quick actions', async () => {
+  it('renders five functional quick actions', async () => {
     const { user } = setup();
     await user.click(screen.getByRole('button', { name: 'افتح المساعد الذكي' }));
-    for (const label of ['رشح لي كتاب', 'اعرض الكتب المتاحة', 'اعرض إعاراتي', 'اعرض حجوزاتي'])
+    for (const label of ['ابحث عن كتاب', 'رشحلي كتاب', 'إعاراتي', 'حجوزاتي', 'اشرحلي موضوع'])
       expect(screen.getByRole('button', { name: new RegExp(label) })).toBeVisible();
   });
 
   it('submits the recommendation quick action through the API boundary', async () => {
     const { user } = setup('ar', 'member-token');
     await user.click(screen.getByRole('button', { name: 'افتح المساعد الذكي' }));
-    await user.click(screen.getByRole('button', { name: /رشح لي كتاب/ }));
-    expect(sendMock).toHaveBeenCalledWith('رشح لي كتاب', 'ar', [], 'member-token');
+    await user.click(screen.getByRole('button', { name: /رشحلي كتاب/ }));
+    expect(sendMock).toHaveBeenCalledWith('رشحلي كتاب', 'ar', [], 'member-token');
   });
 
   it('sends a typed user message with Enter', async () => {
@@ -107,6 +109,20 @@ describe('Delta University Library AI Assistant widget', () => {
     await user.type(screen.getByLabelText('اكتب سؤالك هنا…'), 'Big Java متاح؟{enter}');
     expect(sendMock).toHaveBeenCalledWith('Big Java متاح؟', 'ar', [], undefined);
     expect(screen.getByText('Big Java متاح؟')).toBeVisible();
+  });
+
+  it('keeps long mixed Arabic and English text readable in distinct message treatments', async () => {
+    const answer =
+      'القائمة المرتبطة Linked List مناسبة عندما تحتاج إلى إضافة العناصر وحذفها بشكل متكرر مع الحفاظ على ترتيب واضح للبيانات.';
+    sendMock.mockResolvedValue(response({ message: answer }));
+    await openAndSend('اشرح Linked List بالعربي');
+    const userMessage = screen.getByText('اشرح Linked List بالعربي').closest('.assistant-message');
+    const assistantMessage = await screen.findByText(answer);
+    expect(userMessage).toHaveClass('assistant-message--user');
+    expect(assistantMessage).toHaveAttribute('dir', 'auto');
+    expect(assistantMessage.closest('.assistant-message')).toHaveClass(
+      'assistant-message--assistant',
+    );
   });
 
   it('uses Shift+Enter as a newline instead of submitting', async () => {
@@ -152,6 +168,21 @@ describe('Delta University Library AI Assistant widget', () => {
     await openAndSend('رشح لي كتاب', 'member-token');
     expect((await screen.findAllByText('جافا الكبير')).at(-1)).toBeVisible();
     expect(screen.getByText('مناسب لدراسة Java.')).toBeVisible();
+  });
+
+  it('renders four compact search cards without duplicating their metadata', async () => {
+    const books = Array.from({ length: 4 }, (_, index) => ({
+      ...book,
+      id: `book-${index + 1}`,
+      slug: `book-${index + 1}`,
+      title: `Book ${index + 1}`,
+      titleAr: `كتاب ${index + 1}`,
+      semanticReason: `سبب مختصر ${index + 1}`,
+    }));
+    sendMock.mockResolvedValue(response({ type: 'BOOK_SEARCH_RESULTS', books }));
+    await openAndSend('ابحث عن كتب برمجة');
+    expect(await screen.findAllByRole('button', { name: 'عرض الكتاب' })).toHaveLength(4);
+    expect(screen.getAllByText(/سبب مختصر/)).toHaveLength(4);
   });
 
   it('renders a structured Arabic academic explanation with hierarchy and bidi-safe example', async () => {
@@ -319,7 +350,8 @@ describe('Delta University Library AI Assistant widget', () => {
       }),
     );
     await openAndSend('اعرض إعاراتي', 'member-token');
-    expect(await screen.findByText('ACTIVE')).toBeVisible();
+    expect(await screen.findByText('نشط')).toBeVisible();
+    expect(screen.queryByText('ACTIVE')).not.toBeInTheDocument();
     expect(screen.getByText(/موعد الإرجاع/)).toBeVisible();
   });
 
@@ -340,6 +372,8 @@ describe('Delta University Library AI Assistant widget', () => {
       }),
     );
     await openAndSend('اعرض حجوزاتي', 'member-token');
+    expect(await screen.findByText('نشط')).toBeVisible();
+    expect(screen.queryByText('ACTIVE')).not.toBeInTheDocument();
     expect(await screen.findByText(/ينتهي الحجز/)).toBeVisible();
     expect(screen.getByRole('button', { name: 'عرض الحجز' })).toBeVisible();
   });
@@ -378,6 +412,7 @@ describe('Delta University Library AI Assistant widget', () => {
       .mockResolvedValueOnce(response({ type: 'BOOK_LOCATION', message: 'الدور الثالث.' }));
     const { user, input } = await openAndSend('Big Java متاح؟');
     await screen.findByText('يوجد نسخة متاحة.');
+    expect(screen.getByRole('status')).toHaveTextContent('نتحدث عن: جافا الكبير');
     await user.type(input, 'موجود فين؟');
     await user.click(screen.getByRole('button', { name: 'إرسال السؤال' }));
     expect(sendMock).toHaveBeenLastCalledWith(
@@ -398,16 +433,30 @@ describe('Delta University Library AI Assistant widget', () => {
       response({ type: 'BOOK_SEARCH_RESULTS', message: 'لم أجد كتبًا مطابقة.', books: [] }),
     );
     await openAndSend('كتاب غير موجود');
+    expect(await screen.findByRole('heading', { name: 'لا توجد نتائج مناسبة' })).toBeVisible();
     expect(await screen.findByText('لم أجد كتبًا مطابقة.')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'جرّب موضوعًا أوسع' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'ابحث باسم الكتاب' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'عرض الكتاب' })).not.toBeInTheDocument();
+  });
+
+  it('moves an empty-result follow-up into the real composer', async () => {
+    sendMock.mockResolvedValue(
+      response({ type: 'BOOK_SEARCH_RESULTS', message: 'لم أجد كتبًا مطابقة.', books: [] }),
+    );
+    const { user } = await openAndSend('موضوع شديد التحديد');
+    await user.click(await screen.findByRole('button', { name: 'جرّب موضوعًا أوسع' }));
+    expect(screen.getByLabelText('اكتب سؤالك هنا…')).toHaveValue('عايز كتب عن ');
+    await waitFor(() => expect(screen.getByLabelText('اكتب سؤالك هنا…')).toHaveFocus());
   });
 
   it('renders a safe network failure state', async () => {
     sendMock.mockRejectedValue(new Error('secret stack'));
     await openAndSend('اشرح stack');
-    expect(
-      await screen.findByText('واجهت مشكلة مؤقتة أثناء تجهيز الشرح. جرّب مرة ثانية.'),
-    ).toBeVisible();
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'واجهت مشكلة مؤقتة أثناء تجهيز الشرح. جرّب مرة ثانية.',
+    );
+    expect(screen.getByRole('heading', { name: 'تعذر إكمال الطلب' })).toBeVisible();
     expect(screen.queryByText(/secret stack/)).not.toBeInTheDocument();
   });
 
@@ -429,10 +478,9 @@ describe('Delta University Library AI Assistant widget', () => {
   it('uses coherent English LTR labels and semantics', async () => {
     const { user } = setup('en');
     await user.click(screen.getByRole('button', { name: 'Open the AI assistant' }));
-    expect(screen.getByRole('dialog', { name: 'How can I help today?' })).toHaveAttribute(
-      'dir',
-      'ltr',
-    );
+    expect(
+      screen.getByRole('dialog', { name: 'Delta University Library Assistant' }),
+    ).toHaveAttribute('dir', 'ltr');
     expect(screen.getByLabelText('Type your question…')).toBeVisible();
   });
 

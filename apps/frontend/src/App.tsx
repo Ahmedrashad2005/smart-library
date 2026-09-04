@@ -5,6 +5,8 @@ import { apiRequest, apiUpload, requestMessage } from './lib/api';
 import { PublicCatalog } from './catalog/PublicCatalog';
 import { PublicHeader } from './catalog/PublicHeader';
 import { BookDetail } from './catalog/BookDetail';
+import { BookCoverMedia } from './catalog/BookCoverMedia';
+import { PublicIcon } from './catalog/PublicIcon';
 import { BookPreviewPage } from './catalog/BookPreviewPage';
 import { BookPreviewField, type PreviewMetadata } from './catalog/BookPreviewField';
 import { CampusPage } from './catalog/CampusPage';
@@ -13,6 +15,7 @@ import { LoanRoute } from './loans/pages';
 import { MyReservationsRoute } from './reservations/MyReservationsPage';
 import { FacultiesPage } from './faculties/FacultiesPage';
 import { AssistantWidget } from './assistant/AssistantWidget';
+import { LibrarianDashboard } from './librarian/LibrarianDashboard';
 import {
   canManageRoute,
   managementListQuery,
@@ -68,6 +71,7 @@ type Book = {
   isbn10?: string;
   description?: string;
   descriptionAr?: string;
+  coverImageUrl?: string;
   language: string;
   categoryId: string;
   publisherId?: string;
@@ -150,6 +154,8 @@ function App(): JSX.Element {
   const memberLoanRoute = isMemberLoanRoute(path);
   const loanRoute = staffLoanRoute || memberLoanRoute;
   const reservationRoute = path === '/my-reservations' || /^\/my-reservations\/[^/]+$/.test(path);
+  const librarianDashboardRoute =
+    path === '/librarian' || path === '/librarian/dashboard' || path === '/librarian/reservations';
   const previewMatch = path.match(/^\/books\/([^/]+)\/preview$/);
   let page: JSX.Element;
   if (path === '/auth/login') {
@@ -272,6 +278,21 @@ function App(): JSX.Element {
         onAuthRequired={() => go(loginPath(`${path}${window.location.search}`))}
       />
     );
+  else if (
+    librarianDashboardRoute &&
+    (!session || (session.role !== 'LIBRARIAN' && session.role !== 'ADMIN'))
+  )
+    page = <LoginGate session={session} setSession={setSession} locale={arabic ? 'ar' : 'en'} />;
+  else if (librarianDashboardRoute)
+    page = (
+      <LibrarianDashboard
+        path={path}
+        token={session!.token}
+        locale={arabic ? 'ar' : 'en'}
+        go={go}
+        notify={setNotice}
+      />
+    );
   else if (management && !canManageRoute(session?.role, path))
     page = <LoginGate session={session} setSession={setSession} locale={arabic ? 'ar' : 'en'} />;
   else if (
@@ -293,7 +314,15 @@ function App(): JSX.Element {
     path === '/librarian/book-copies/create' ||
     /^\/librarian\/book-copies\/[^/]+\/edit$/.test(path)
   )
-    page = <CopiesManager path={path} token={session!.token} go={go} notify={setNotice} />;
+    page = (
+      <CopiesManager
+        path={path}
+        token={session!.token}
+        locale={arabic ? 'ar' : 'en'}
+        go={go}
+        notify={setNotice}
+      />
+    );
   else if (area) page = <MasterManager area={area} token={session!.token} notify={setNotice} />;
   else if (path === '/faculties' || /^\/faculties\/[^/]+$/.test(path))
     page = (
@@ -523,15 +552,17 @@ function BooksManager({
   const id = editing ? path.split('/')[3]! : '';
   if (creating || editing)
     return <BookForm id={id} token={token} locale={locale} go={go} notify={notify} />;
-  return <BooksTable token={token} go={go} notify={notify} />;
+  return <BooksTable token={token} locale={locale} go={go} notify={notify} />;
 }
 
 function BooksTable({
   token,
+  locale,
   go,
   notify,
 }: {
   token: string;
+  locale: 'ar' | 'en';
   go: (to: string) => void;
   notify: (message: string) => void;
 }): JSX.Element {
@@ -560,7 +591,7 @@ function BooksTable({
     if (!confirm) return;
     try {
       await apiRequest(`/books/${confirm.id}/archive`, { method: 'POST' }, token);
-      notify(`“${confirm.title}” archived.`);
+      notify(locale === 'ar' ? `تمت أرشفة “${confirm.title}”.` : `“${confirm.title}” archived.`);
       setConfirm(null);
       await load(query, data?.page, archiveState);
     } catch (reason) {
@@ -569,22 +600,35 @@ function BooksTable({
   };
   return (
     <ManagementPage
-      title="Books"
-      description="Create, update, and archive catalog records."
+      locale={locale}
+      go={go}
+      activePath="/librarian/books"
+      title={locale === 'ar' ? 'الكتب' : 'Books'}
+      description={
+        locale === 'ar'
+          ? 'أضف سجلات الكتب ونظّم محتوى الكتالوج.'
+          : 'Create, update, and archive catalog records.'
+      }
       action={
         <button className="button primary" onClick={() => go('/librarian/books/create')}>
-          Add book
+          <span aria-hidden="true">＋</span> {locale === 'ar' ? 'إضافة كتاب' : 'Add book'}
         </button>
       }
     >
       <div className="filter-row">
-        <Search value={query} onChange={setQuery} onSearch={() => void load(query)} />
+        <Search
+          value={query}
+          onChange={setQuery}
+          onSearch={() => void load(query)}
+          locale={locale}
+        />
         <ArchiveFilter
           value={archiveState}
           change={(state) => {
             setArchiveState(state);
             void load(query, 1, state);
           }}
+          locale={locale}
         />
       </div>
       {!data && !error ? (
@@ -596,24 +640,64 @@ function BooksTable({
           title="No books found"
           action={
             <button className="button primary" onClick={() => go('/librarian/books/create')}>
-              Add book
+              <span aria-hidden="true">＋</span> {locale === 'ar' ? 'إضافة كتاب' : 'Add book'}
             </button>
           }
         />
       ) : (
         <>
-          <Table headers={['Title', 'Authors', 'Availability', 'Actions']}>
+          <Table
+            headers={
+              locale === 'ar'
+                ? ['الكتاب', 'المؤلفون', 'التوفر', 'الإجراءات']
+                : ['Book', 'Authors', 'Availability', 'Actions']
+            }
+          >
             {data.items.map((book) => (
               <tr key={book.id}>
                 <td>
-                  <strong>{book.title}</strong>
-                  <br />
-                  <span className="muted">{book.isbn13 || 'No ISBN'}</span>
+                  <div className="management-book-cell">
+                    <span className="management-book-cell__cover">
+                      <BookCoverMedia
+                        url={book.coverImageUrl}
+                        title={locale === 'ar' ? book.titleAr || book.title : book.title}
+                        author={book.authors[0]?.author.name || ''}
+                        coverLabel={`${locale === 'ar' ? 'غلاف' : 'Cover of'} ${book.title}`}
+                        noCoverLabel={locale === 'ar' ? 'لا يوجد غلاف' : 'No cover available'}
+                        variantKey={book.id}
+                      />
+                    </span>
+                    <span className="management-book-cell__details">
+                      <strong dir="auto">
+                        {locale === 'ar' ? book.titleAr || book.title : book.title}
+                      </strong>
+                      <span className="muted">
+                        {book.category?.nameAr && locale === 'ar'
+                          ? book.category.nameAr
+                          : book.category?.nameEn ||
+                            (locale === 'ar' ? 'غير مصنف' : 'Uncategorized')}
+                      </span>
+                      <span className="metadata-ltr">
+                        {book.isbn13 || (locale === 'ar' ? 'بدون ISBN' : 'No ISBN')}
+                      </span>
+                    </span>
+                  </div>
                 </td>
-                <td>{book.authors.map(({ author }) => author.name).join(', ')}</td>
+                <td dir="auto">
+                  {book.authors
+                    .map(({ author }) =>
+                      locale === 'ar' ? author.nameAr || author.name : author.name,
+                    )
+                    .join(locale === 'ar' ? '، ' : ', ') ||
+                    (locale === 'ar' ? 'غير مذكور' : 'Not listed')}
+                </td>
                 <td>
                   <Badge
-                    value={`${book.availableCopies}/${book.totalCopies} available`}
+                    value={
+                      locale === 'ar'
+                        ? `${book.availableCopies} من ${book.totalCopies} متاح`
+                        : `${book.availableCopies}/${book.totalCopies} available`
+                    }
                     tone="success"
                   />
                 </td>
@@ -624,13 +708,17 @@ function BooksTable({
                       onClick={() =>
                         void apiRequest(`/books/${book.id}/restore`, { method: 'POST' }, token)
                           .then(async () => {
-                            notify(`“${book.title}” restored.`);
+                            notify(
+                              locale === 'ar'
+                                ? `تمت استعادة “${book.title}”.`
+                                : `“${book.title}” restored.`,
+                            );
                             await load(query, data?.page, archiveState);
                           })
                           .catch((reason: unknown) => setError(requestMessage(reason)))
                       }
                     >
-                      Restore
+                      {locale === 'ar' ? 'استعادة' : 'Restore'}
                     </button>
                   ) : (
                     <>
@@ -638,10 +726,10 @@ function BooksTable({
                         className="button quiet"
                         onClick={() => go(`/librarian/books/${book.id}/edit`)}
                       >
-                        Edit
+                        {locale === 'ar' ? 'تعديل' : 'Edit'}
                       </button>
                       <button className="button danger" onClick={() => setConfirm(book)}>
-                        Archive
+                        {locale === 'ar' ? 'أرشفة' : 'Archive'}
                       </button>
                     </>
                   )}
@@ -658,9 +746,13 @@ function BooksTable({
       )}
       {confirm && (
         <ConfirmDialog
-          title="Archive book?"
-          message={`This hides “${confirm.title}” from the active catalog. You can restore it during this session.`}
-          confirm="Archive"
+          title={locale === 'ar' ? 'أرشفة الكتاب؟' : 'Archive book?'}
+          message={
+            locale === 'ar'
+              ? `سيختفي “${confirm.title}” من الكتالوج النشط، ويمكن استعادته لاحقًا.`
+              : `This hides “${confirm.title}” from the active catalog. You can restore it during this session.`
+          }
+          confirm={locale === 'ar' ? 'أرشفة' : 'Archive'}
           onConfirm={() => void archive()}
           onCancel={() => setConfirm(null)}
         />
@@ -707,6 +799,8 @@ function BookForm({
     updatedAt: null,
   });
   const [previewFile, setPreviewFile] = useState<File | null>(null);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
   useEffect(() => {
@@ -731,6 +825,7 @@ function BookForm({
             description: item.description || '',
             language: item.language,
           });
+          setCoverUrl(item.coverImageUrl || null);
           if (item.preview) setPreview(item.preview);
         })
         .catch((reason: unknown) => setMessage(requestMessage(reason)));
@@ -755,6 +850,15 @@ function BookForm({
         { method: id ? 'PATCH' : 'POST', body: JSON.stringify(payload) },
         token,
       );
+      if (coverFile) {
+        const uploadedCover = await apiUpload<{ coverImageUrl: string }>(
+          `/books/${saved.id}/cover`,
+          coverFile,
+          token,
+        );
+        setCoverUrl(uploadedCover.coverImageUrl);
+        setCoverFile(null);
+      }
       if (previewFile) {
         const uploaded = await apiUpload<PreviewMetadata>(
           `/books/${saved.id}/preview-pdf`,
@@ -764,7 +868,15 @@ function BookForm({
         setPreview(uploaded);
         setPreviewFile(null);
       }
-      notify(id ? 'Book updated.' : 'Book created.');
+      notify(
+        id
+          ? locale === 'ar'
+            ? 'تم تحديث بيانات الكتاب.'
+            : 'Book updated.'
+          : locale === 'ar'
+            ? 'تمت إضافة الكتاب بنجاح.'
+            : 'Book created.',
+      );
       go('/librarian/books');
     } catch (reason) {
       setMessage(requestMessage(reason));
@@ -780,24 +892,49 @@ function BookForm({
     );
   return (
     <ManagementPage
+      locale={locale}
+      go={go}
+      activePath="/librarian/books"
       title={id ? 'Edit book' : 'Create book'}
-      description="Required fields are marked clearly. Authors can be selected together."
+      description={
+        locale === 'ar'
+          ? 'أدخل البيانات الأساسية للكتاب ثم احفظ التغييرات.'
+          : 'Required fields are marked clearly. Authors can be selected together.'
+      }
     >
-      <form className="form-grid" onSubmit={(event) => void submit(event)}>
-        <Field label="Title" error={errors.title}>
+      <form className="form-grid librarian-form" onSubmit={(event) => void submit(event)}>
+        <section className="form-section">
+          <div className="form-section__heading">
+            <span className="form-section__icon">
+              <PublicIcon name="book" />
+            </span>
+            <div>
+              <p className="form-section__eyebrow">
+                {locale === 'ar' ? 'بيانات الكتالوج' : 'Catalog record'}
+              </p>
+              <h2>{locale === 'ar' ? 'معلومات الكتاب' : 'Book information'}</h2>
+              <p>
+                {locale === 'ar'
+                  ? 'العنوان والمؤلف والتصنيف الذي يظهر للقراء.'
+                  : 'Title, authors, and classification shown to readers.'}
+              </p>
+            </div>
+          </div>
+          <div className="form-section__grid">
+            <Field label={locale === 'ar' ? 'العنوان' : 'Title'} error={errors.title}>
           <input
             value={book.title}
             onChange={(event) => setBook({ ...book, title: event.target.value })}
             required
           />
         </Field>
-        <Field label="Arabic title">
+            <Field label={locale === 'ar' ? 'العنوان بالعربية' : 'Arabic title'}>
           <input
             value={book.titleAr}
             onChange={(event) => setBook({ ...book, titleAr: event.target.value })}
           />
         </Field>
-        <Field label="Slug" error={errors.slug}>
+            <Field label={locale === 'ar' ? 'المعرّف المختصر' : 'Slug'} error={errors.slug}>
           <input
             value={book.slug}
             onChange={(event) => setBook({ ...book, slug: event.target.value })}
@@ -810,12 +947,12 @@ function BookForm({
             onChange={(event) => setBook({ ...book, isbn13: event.target.value })}
           />
         </Field>
-        <Field label="Category" error={errors.categoryId}>
+            <Field label={locale === 'ar' ? 'التصنيف' : 'Category'} error={errors.categoryId}>
           <select
             value={book.categoryId}
             onChange={(event) => setBook({ ...book, categoryId: event.target.value })}
           >
-            <option value="">Choose category</option>
+                <option value="">{locale === 'ar' ? 'اختر التصنيف' : 'Choose category'}</option>
             {masters.categories.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.nameEn}
@@ -823,12 +960,12 @@ function BookForm({
             ))}
           </select>
         </Field>
-        <Field label="Publisher">
+            <Field label={locale === 'ar' ? 'الناشر' : 'Publisher'}>
           <select
             value={book.publisherId}
             onChange={(event) => setBook({ ...book, publisherId: event.target.value })}
           >
-            <option value="">No publisher</option>
+                <option value="">{locale === 'ar' ? 'بدون ناشر' : 'No publisher'}</option>
             {masters.publishers.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.name}
@@ -836,16 +973,16 @@ function BookForm({
             ))}
           </select>
         </Field>
-        <Field label="Language">
+            <Field label={locale === 'ar' ? 'لغة الكتاب' : 'Language'}>
           <select
             value={book.language}
             onChange={(event) => setBook({ ...book, language: event.target.value })}
           >
-            <option value="en">English</option>
-            <option value="ar">Arabic</option>
+                <option value="en">{locale === 'ar' ? 'الإنجليزية' : 'English'}</option>
+                <option value="ar">{locale === 'ar' ? 'العربية' : 'Arabic'}</option>
           </select>
         </Field>
-        <Field label="Authors" error={errors.authorIds}>
+            <Field label={locale === 'ar' ? 'المؤلفون' : 'Authors'} error={errors.authorIds}>
           <select
             multiple
             value={book.authorIds}
@@ -862,14 +999,62 @@ function BookForm({
               </option>
             ))}
           </select>
-          <span className="hint">Use Ctrl/Cmd to select more than one author.</span>
+              <span className="hint">
+                {locale === 'ar'
+                  ? 'يمكن اختيار أكثر من مؤلف باستخدام Ctrl/Cmd.'
+                  : 'Use Ctrl/Cmd to select more than one author.'}
+              </span>
         </Field>
-        <Field label="Description" wide>
+          </div>
+        </section>
+        <section className="form-section">
+          <div className="form-section__heading">
+            <span className="form-section__icon form-section__icon--accent">Aa</span>
+            <div>
+              <p className="form-section__eyebrow">
+                {locale === 'ar' ? 'المظهر والمحتوى' : 'Content & media'}
+              </p>
+              <h2>{locale === 'ar' ? 'الوصف والغلاف' : 'Description & cover'}</h2>
+              <p>
+                {locale === 'ar'
+                  ? 'أضف وصفًا واضحًا وغلافًا مناسبًا للعرض.'
+                  : 'Add a clear description and a portrait cover.'}
+              </p>
+            </div>
+          </div>
+          <div className="form-section__grid">
+            <Field label={locale === 'ar' ? 'الوصف' : 'Description'} wide>
           <textarea
             value={book.description}
             onChange={(event) => setBook({ ...book, description: event.target.value })}
           />
         </Field>
+        <Field label={locale === 'ar' ? 'غلاف الكتاب' : 'Book cover'}>
+          <div className="cover-upload-control">
+                {coverUrl && (
+                  <img
+                    className="management-cover-preview"
+                    src={coverUrl}
+                    alt={locale === 'ar' ? 'الغلاف الحالي' : 'Current book cover'}
+                  />
+                )}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  aria-label={locale === 'ar' ? 'اختر غلاف الكتاب' : 'Choose book cover'}
+                  onChange={(event) => setCoverFile(event.target.files?.[0] || null)}
+                />
+                <span className="hint">
+                  {coverFile
+                    ? coverFile.name
+                    : locale === 'ar'
+                      ? 'JPG أو PNG أو WebP، بحد أقصى 5 ميجابايت'
+                      : 'JPG, PNG, or WebP, up to 5 MB'}
+                </span>
+          </div>
+        </Field>
+          </div>
+        </section>
         <BookPreviewField
           locale={locale}
           bookId={id || undefined}
@@ -897,10 +1082,16 @@ function BookForm({
         )}
         <div className="form-actions">
           <button className="button quiet" type="button" onClick={() => go('/librarian/books')}>
-            Cancel
+            {locale === 'ar' ? 'إلغاء' : 'Cancel'}
           </button>
           <button className="button primary" disabled={saving}>
-            {saving ? 'Saving…' : 'Save book'}
+            {saving
+              ? locale === 'ar'
+                ? 'جارٍ الحفظ…'
+                : 'Saving…'
+              : locale === 'ar'
+                ? 'حفظ الكتاب'
+                : 'Save book'}
           </button>
         </div>
       </form>
@@ -911,35 +1102,45 @@ function BookForm({
 function CopiesManager({
   path,
   token,
+  locale,
   go,
   notify,
 }: {
   path: string;
   token: string;
+  locale: 'ar' | 'en';
   go: (to: string) => void;
   notify: (message: string) => void;
 }): JSX.Element {
   const editing = /^\/librarian\/book-copies\/[^/]+\/edit$/.test(path);
   const creating = path.endsWith('/create');
   const id = editing ? path.split('/')[3]! : '';
-  if (creating || editing) return <CopyForm id={id} token={token} go={go} notify={notify} />;
-  return <CopiesTable token={token} go={go} notify={notify} />;
+  if (creating || editing)
+    return <CopyForm id={id} token={token} locale={locale} go={go} notify={notify} />;
+  return <CopiesTable token={token} locale={locale} go={go} notify={notify} />;
 }
 
 async function loadCopies(
+  token: string,
   query = '',
   page = 1,
   archiveState: 'active' | 'archived' | 'all' = 'active',
 ): Promise<CopyResult> {
-  return apiRequest<CopyResult>(managementListQuery('/book-copies', query, page, archiveState));
+  return apiRequest<CopyResult>(
+    managementListQuery('/book-copies', query, page, archiveState),
+    {},
+    token,
+  );
 }
 
 function CopiesTable({
   token,
+  locale,
   go,
   notify,
 }: {
   token: string;
+  locale: 'ar' | 'en';
   go: (to: string) => void;
   notify: (message: string) => void;
 }): JSX.Element {
@@ -952,12 +1153,12 @@ function CopiesTable({
     async (q = query, page = 1, state = archiveState) => {
       setError('');
       try {
-        setData(await loadCopies(q, page, state));
+        setData(await loadCopies(token, q, page, state));
       } catch (reason) {
         setError(requestMessage(reason));
       }
     },
-    [archiveState, query],
+    [archiveState, query, token],
   );
   useEffect(() => {
     void load();
@@ -966,7 +1167,9 @@ function CopiesTable({
     if (!confirm) return;
     try {
       await apiRequest(`/book-copies/${confirm.id}/archive`, { method: 'POST' }, token);
-      notify(`${confirm.copyCode} archived.`);
+      notify(
+        locale === 'ar' ? `تمت أرشفة النسخة ${confirm.copyCode}.` : `${confirm.copyCode} archived.`,
+      );
       setConfirm(null);
       await load();
     } catch (reason) {
@@ -975,22 +1178,35 @@ function CopiesTable({
   };
   return (
     <ManagementPage
-      title="Book copies"
-      description="Track each physical copy, its location, condition, and availability."
+      locale={locale}
+      go={go}
+      activePath="/librarian/book-copies"
+      title={locale === 'ar' ? 'النسخ والمقتنيات' : 'Book copies'}
+      description={
+        locale === 'ar'
+          ? 'تابع كل نسخة وموقعها وحالتها داخل المكتبة.'
+          : 'Track each physical copy, its location, condition, and availability.'
+      }
       action={
         <button className="button primary" onClick={() => go('/librarian/book-copies/create')}>
-          Add copy
+          <span aria-hidden="true">＋</span> {locale === 'ar' ? 'إضافة نسخة' : 'Add copy'}
         </button>
       }
     >
       <div className="filter-row">
-        <Search value={query} onChange={setQuery} onSearch={() => void load(query, 1)} />
+        <Search
+          value={query}
+          onChange={setQuery}
+          onSearch={() => void load(query, 1)}
+          locale={locale}
+        />
         <ArchiveFilter
           value={archiveState}
           change={(state) => {
             setArchiveState(state);
             void load(query, 1, state);
           }}
+          locale={locale}
         />
       </div>
       {!data && !error ? (
@@ -999,36 +1215,47 @@ function CopiesTable({
         <ErrorState message={error} retry={() => void load()} />
       ) : !data?.items.length ? (
         <EmptyState
-          title="No book copies found"
+          title={locale === 'ar' ? 'لم تتم إضافة نسخ بعد' : 'No book copies found'}
           action={
             <button className="button primary" onClick={() => go('/librarian/book-copies/create')}>
-              Add copy
+              <span aria-hidden="true">＋</span> {locale === 'ar' ? 'إضافة نسخة' : 'Add copy'}
             </button>
           }
         />
       ) : (
         <>
-          <Table headers={['Copy', 'Book', 'Location', 'Status', 'Actions']}>
+          <Table
+            headers={
+              locale === 'ar'
+                ? ['النسخة', 'الكتاب', 'الموقع', 'الحالة', 'الإجراءات']
+                : ['Copy', 'Book', 'Location', 'Status', 'Actions']
+            }
+          >
             {data.items.map((copy) => (
               <tr key={copy.id}>
                 <td>
                   <strong>{copy.copyCode}</strong>
                   <br />
-                  <span className="muted">{copy.barcode || 'No barcode'}</span>
+                  <span className="muted metadata-ltr">
+                    {copy.barcode || (locale === 'ar' ? 'بدون باركود' : 'No barcode')}
+                  </span>
                 </td>
                 <td>{copy.book?.title}</td>
                 <td>
+                  <span className="metadata-ltr">
                   {copy.section?.code || copy.sectionId} / {copy.shelf?.code || copy.shelfId}
+                  </span>
                 </td>
                 <td>
                   {copy.isArchived ? (
-                    <Badge value="Archived" tone="warning" />
+                    <Badge value={locale === 'ar' ? 'مؤرشف' : 'Archived'} tone="warning" />
                   ) : (
                     <StatusSelect
                       copy={copy}
+                      locale={locale}
                       token={token}
                       done={async () => {
-                        notify('Copy status updated.');
+                        notify(locale === 'ar' ? 'تم تحديث حالة النسخة.' : 'Copy status updated.');
                         await load();
                       }}
                       fail={setError}
@@ -1046,13 +1273,17 @@ function CopiesTable({
                           token,
                         )
                           .then(async () => {
-                            notify(`${copy.copyCode} restored.`);
+                            notify(
+                              locale === 'ar'
+                                ? `تمت استعادة النسخة ${copy.copyCode}.`
+                                : `${copy.copyCode} restored.`,
+                            );
                             await load();
                           })
                           .catch((reason: unknown) => setError(requestMessage(reason)))
                       }
                     >
-                      Restore
+                      {locale === 'ar' ? 'استعادة' : 'Restore'}
                     </button>
                   ) : (
                     <>
@@ -1060,10 +1291,10 @@ function CopiesTable({
                         className="button quiet"
                         onClick={() => go(`/librarian/book-copies/${copy.id}/edit`)}
                       >
-                        Edit
+                        {locale === 'ar' ? 'تعديل' : 'Edit'}
                       </button>
                       <button className="button danger" onClick={() => setConfirm(copy)}>
-                        Archive
+                        {locale === 'ar' ? 'أرشفة' : 'Archive'}
                       </button>
                     </>
                   )}
@@ -1080,9 +1311,13 @@ function CopiesTable({
       )}
       {confirm && (
         <ConfirmDialog
-          title="Archive book copy?"
-          message={`This removes ${confirm.copyCode} from availability counts.`}
-          confirm="Archive"
+          title={locale === 'ar' ? 'أرشفة نسخة الكتاب؟' : 'Archive book copy?'}
+          message={
+            locale === 'ar'
+              ? `ستُستبعد النسخة ${confirm.copyCode} من عدد النسخ المتاحة.`
+              : `This removes ${confirm.copyCode} from availability counts.`
+          }
+          confirm={locale === 'ar' ? 'أرشفة' : 'Archive'}
           onConfirm={() => void archive()}
           onCancel={() => setConfirm(null)}
         />
@@ -1093,11 +1328,13 @@ function CopiesTable({
 
 function StatusSelect({
   copy,
+  locale,
   token,
   done,
   fail,
 }: {
   copy: Copy;
+  locale: 'ar' | 'en';
   token: string;
   done: () => Promise<void>;
   fail: (message: string) => void;
@@ -1128,7 +1365,7 @@ function StatusSelect({
       >
         {statuses.map((status) => (
           <option value={status} key={status}>
-            {status}
+            {copyStatusLabel(status, locale)}
           </option>
         ))}
       </select>
@@ -1136,14 +1373,68 @@ function StatusSelect({
   );
 }
 
+function copyStatusLabel(status: CopyStatus, locale: 'ar' | 'en'): string {
+  if (locale === 'ar') {
+    return (
+      {
+        AVAILABLE: 'متاح',
+        BORROWED: 'مُعار',
+        RESERVED: 'محجوز',
+        LOST: 'مفقود',
+        DAMAGED: 'تالف',
+        MAINTENANCE: 'قيد الصيانة',
+        ARCHIVED: 'مؤرشف',
+      } satisfies Record<CopyStatus, string>
+    )[status];
+  }
+  return status === 'AVAILABLE'
+    ? 'Available'
+    : status === 'BORROWED'
+      ? 'Borrowed'
+      : status === 'RESERVED'
+        ? 'Reserved'
+        : status === 'LOST'
+          ? 'Lost'
+          : status === 'DAMAGED'
+            ? 'Damaged'
+            : status === 'MAINTENANCE'
+              ? 'Maintenance'
+              : 'Archived';
+}
+
+function copyConditionLabel(condition: CopyCondition, locale: 'ar' | 'en'): string {
+  if (locale === 'ar') {
+    return (
+      {
+        NEW: 'جديدة',
+        GOOD: 'جيدة',
+        FAIR: 'مقبولة',
+        POOR: 'ضعيفة',
+        DAMAGED: 'تالف',
+      } satisfies Record<CopyCondition, string>
+    )[condition];
+  }
+  return condition === 'NEW'
+    ? 'New'
+    : condition === 'GOOD'
+      ? 'Good'
+      : condition === 'FAIR'
+        ? 'Fair'
+        : condition === 'POOR'
+          ? 'Poor'
+          : 'Damaged';
+}
+
 function CopyForm({
   id,
   token,
+  locale,
   go,
   notify,
 }: {
   id: string;
   token: string;
+  locale: 'ar' | 'en';
   go: (to: string) => void;
   notify: (message: string) => void;
 }): JSX.Element {
@@ -1222,17 +1513,42 @@ function CopyForm({
     );
   return (
     <ManagementPage
+      locale={locale}
+      go={go}
+      activePath="/librarian/book-copies"
       title={id ? 'Edit book copy' : 'Create book copy'}
-      description="A shelf is always selected from the chosen section."
+      description={
+        locale === 'ar'
+          ? 'اربط النسخة بموقع فعلي داخل المكتبة وحدد حالتها.'
+          : 'A shelf is always selected from the chosen section.'
+      }
     >
-      <form className="form-grid" onSubmit={(event) => void submit(event)}>
-        <Field label="Book" error={errors.bookId}>
+      <form className="form-grid librarian-form" onSubmit={(event) => void submit(event)}>
+        <section className="form-section">
+          <div className="form-section__heading">
+            <span className="form-section__icon">
+              <PublicIcon name="book" />
+            </span>
+            <div>
+              <p className="form-section__eyebrow">
+                {locale === 'ar' ? 'مقتنيات المكتبة' : 'Library inventory'}
+              </p>
+              <h2>{locale === 'ar' ? 'موقع النسخة' : 'Copy location'}</h2>
+              <p>
+                {locale === 'ar'
+                  ? 'اختر الكتاب والقسم والرف بدقة.'
+                  : 'Choose the book, section, and shelf precisely.'}
+              </p>
+            </div>
+          </div>
+          <div className="form-section__grid">
+            <Field label={locale === 'ar' ? 'الكتاب' : 'Book'} error={errors.bookId}>
           <select
             disabled={!!id}
             value={copy.bookId}
             onChange={(event) => setCopy({ ...copy, bookId: event.target.value })}
           >
-            <option value="">Choose book</option>
+                <option value="">{locale === 'ar' ? 'اختر الكتاب' : 'Choose book'}</option>
             {masters.books.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.title}
@@ -1240,12 +1556,14 @@ function CopyForm({
             ))}
           </select>
         </Field>
-        <Field label="Section" error={errors.sectionId}>
+            <Field label={locale === 'ar' ? 'القسم' : 'Section'} error={errors.sectionId}>
           <select
             value={copy.sectionId}
-            onChange={(event) => setCopy({ ...copy, sectionId: event.target.value, shelfId: '' })}
+                onChange={(event) =>
+                  setCopy({ ...copy, sectionId: event.target.value, shelfId: '' })
+                }
           >
-            <option value="">Choose section</option>
+                <option value="">{locale === 'ar' ? 'اختر القسم' : 'Choose section'}</option>
             {masters.sections.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.code} — {item.nameEn}
@@ -1253,13 +1571,13 @@ function CopyForm({
             ))}
           </select>
         </Field>
-        <Field label="Shelf" error={errors.shelfId}>
+            <Field label={locale === 'ar' ? 'الرف' : 'Shelf'} error={errors.shelfId}>
           <select
             value={copy.shelfId}
             disabled={!copy.sectionId}
             onChange={(event) => setCopy({ ...copy, shelfId: event.target.value })}
           >
-            <option value="">Choose shelf</option>
+                <option value="">{locale === 'ar' ? 'اختر الرف' : 'Choose shelf'}</option>
             {options.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.code} — {item.nameEn}
@@ -1267,32 +1585,52 @@ function CopyForm({
             ))}
           </select>
         </Field>
-        <Field label="Copy code">
+          </div>
+        </section>
+        <section className="form-section">
+          <div className="form-section__heading">
+            <span className="form-section__icon form-section__icon--accent">
+              <PublicIcon name="categories" />
+            </span>
+            <div>
+              <p className="form-section__eyebrow">
+                {locale === 'ar' ? 'التعريف والحالة' : 'Identification & status'}
+              </p>
+              <h2>{locale === 'ar' ? 'بيانات النسخة' : 'Copy details'}</h2>
+              <p>
+                {locale === 'ar'
+                  ? 'استخدم رموزًا واضحة ليسهل العثور على النسخة.'
+                  : 'Use clear identifiers so the copy is easy to find.'}
+              </p>
+            </div>
+          </div>
+          <div className="form-section__grid">
+            <Field label={locale === 'ar' ? 'رمز النسخة' : 'Copy code'}>
           <input
             value={copy.copyCode}
             disabled={!!id}
             onChange={(event) => setCopy({ ...copy, copyCode: event.target.value })}
           />
         </Field>
-        <Field label="Barcode">
+            <Field label={locale === 'ar' ? 'الباركود' : 'Barcode'}>
           <input
             value={copy.barcode}
             onChange={(event) => setCopy({ ...copy, barcode: event.target.value })}
           />
         </Field>
-        <Field label="Status">
+            <Field label={locale === 'ar' ? 'الحالة' : 'Status'}>
           <select
             value={copy.status}
             onChange={(event) => setCopy({ ...copy, status: event.target.value as CopyStatus })}
           >
             {statuses.map((item) => (
               <option value={item} key={item}>
-                {item}
+                    {copyStatusLabel(item, locale)}
               </option>
             ))}
           </select>
         </Field>
-        <Field label="Condition">
+            <Field label={locale === 'ar' ? 'حالة النسخة' : 'Condition'}>
           <select
             value={copy.condition}
             onChange={(event) =>
@@ -1301,11 +1639,13 @@ function CopyForm({
           >
             {conditions.map((item) => (
               <option value={item} key={item}>
-                {item}
+                    {copyConditionLabel(item, locale)}
               </option>
             ))}
           </select>
         </Field>
+          </div>
+        </section>
         {message && (
           <p className="field-error" role="alert">
             {message}
@@ -1317,10 +1657,16 @@ function CopyForm({
             type="button"
             onClick={() => go('/librarian/book-copies')}
           >
-            Cancel
+            {locale === 'ar' ? 'إلغاء' : 'Cancel'}
           </button>
           <button className="button primary" disabled={saving}>
-            {saving ? 'Saving…' : 'Save copy'}
+            {saving
+              ? locale === 'ar'
+                ? 'جارٍ الحفظ…'
+                : 'Saving…'
+              : locale === 'ar'
+                ? 'حفظ النسخة'
+                : 'Save copy'}
           </button>
         </div>
       </form>
@@ -1658,25 +2004,86 @@ function ManagementPage({
   title,
   description,
   action,
+  locale = 'en',
+  go,
+  activePath,
   children,
 }: {
   title: string;
   description: string;
   action?: ReactNode;
+  locale?: 'ar' | 'en';
+  go?: (to: string) => void;
+  activePath?: string;
   children: ReactNode;
 }): JSX.Element {
   return (
-    <section className="page">
+    <section className="page management-page" dir={locale === 'ar' ? 'rtl' : 'ltr'}>
       <div className="page-heading">
         <div>
-          <p className="eyebrow">Catalog management</p>
+          <p className="eyebrow">
+            {locale === 'ar' ? 'إدارة مكتبة جامعة الدلتا' : 'Delta University Library'}
+          </p>
           <h1>{title}</h1>
           <p>{description}</p>
         </div>
         {action}
       </div>
+      {go && <LibrarianWorkspaceNav locale={locale} activePath={activePath || ''} go={go} />}
       {children}
     </section>
+  );
+}
+
+function LibrarianWorkspaceNav({
+  locale,
+  activePath,
+  go,
+}: {
+  locale: 'ar' | 'en';
+  activePath: string;
+  go: (to: string) => void;
+}): JSX.Element {
+  const items = [
+    { path: '/librarian', icon: 'categories' as const, ar: 'لوحة التحكم', en: 'Overview' },
+    { path: '/librarian/books', icon: 'book' as const, ar: 'الكتب', en: 'Books' },
+    {
+      path: '/librarian/book-copies',
+      icon: 'categories' as const,
+      ar: 'النسخ والمقتنيات',
+      en: 'Copies & inventory',
+    },
+    {
+      path: '/librarian/reservations',
+      icon: 'history' as const,
+      ar: 'الحجوزات',
+      en: 'Reservations',
+    },
+    { path: '/librarian/loans', icon: 'return' as const, ar: 'الإعارات', en: 'Loans' },
+  ];
+  return (
+    <nav
+      className="librarian-workspace-nav"
+      aria-label={locale === 'ar' ? 'مساحة عمل المكتبي' : 'Librarian workspace'}
+    >
+      {items.map((item) => {
+        const active =
+          activePath === item.path ||
+          (item.path !== '/librarian' && activePath.startsWith(`${item.path}/`));
+        return (
+          <button
+            type="button"
+            key={item.path}
+            aria-current={active ? 'page' : undefined}
+            className={active ? 'active' : ''}
+            onClick={() => go(item.path)}
+          >
+            <PublicIcon name={item.icon} />
+            <span>{locale === 'ar' ? item.ar : item.en}</span>
+          </button>
+        );
+      })}
+    </nav>
   );
 }
 function Field({
@@ -1706,10 +2113,12 @@ function Search({
   value,
   onChange,
   onSearch,
+  locale = 'en',
 }: {
   value: string;
   onChange: (value: string) => void;
   onSearch: () => void;
+  locale?: 'ar' | 'en';
 }): JSX.Element {
   return (
     <form
@@ -1720,35 +2129,39 @@ function Search({
       }}
     >
       <label className="sr-only" htmlFor="management-search">
-        Search records
+        {locale === 'ar' ? 'بحث في السجلات' : 'Search records'}
       </label>
       <input
         id="management-search"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        placeholder="Search records"
+        placeholder={
+          locale === 'ar' ? 'ابحث باسم الكتاب أو الرمز…' : 'Search by title, author, or code…'
+        }
       />
-      <button className="button quiet">Search</button>
+      <button className="button quiet">{locale === 'ar' ? 'بحث' : 'Search'}</button>
     </form>
   );
 }
 function ArchiveFilter({
   value,
   change,
+  locale = 'en',
 }: {
   value: 'active' | 'archived' | 'all';
   change: (value: 'active' | 'archived' | 'all') => void;
+  locale?: 'ar' | 'en';
 }): JSX.Element {
   return (
     <label className="archive-filter">
-      <span>Archive state</span>
+      <span>{locale === 'ar' ? 'حالة الأرشفة' : 'Archive state'}</span>
       <select
         value={value}
         onChange={(event) => change(event.target.value as 'active' | 'archived' | 'all')}
       >
-        <option value="active">Active</option>
-        <option value="archived">Archived</option>
-        <option value="all">All</option>
+        <option value="active">{locale === 'ar' ? 'نشط' : 'Active'}</option>
+        <option value="archived">{locale === 'ar' ? 'مؤرشف' : 'Archived'}</option>
+        <option value="all">{locale === 'ar' ? 'الكل' : 'All'}</option>
       </select>
     </label>
   );

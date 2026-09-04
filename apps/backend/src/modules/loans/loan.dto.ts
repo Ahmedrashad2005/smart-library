@@ -1,5 +1,6 @@
-import { IsDateString, IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsDateString, IsEnum, IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import { BookCopyCondition, LoanStatus } from '@prisma/client';
 
 export class BorrowLoanDto {
@@ -72,12 +73,17 @@ export class LoanQueryDto {
   @IsOptional()
   @IsDateString()
   dueTo?: string;
-  @ApiPropertyOptional({ default: '1' })
+  @ApiPropertyOptional({ default: 1, minimum: 1 })
   @IsOptional()
-  @IsString()
-  page?: string;
-  @ApiPropertyOptional({ default: '12' })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number;
+  @ApiPropertyOptional({ default: 12, minimum: 1, maximum: 50 })
   @IsOptional()
-  @IsString()
-  limit?: string;
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  limit?: number;
 }

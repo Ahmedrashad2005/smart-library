@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { CurrentUser, Roles } from '../../common/auth.decorators';
@@ -25,7 +34,7 @@ export class LoansController {
   @Roles(UserRole.LIBRARIAN, UserRole.ADMIN)
   @Post(':id/return')
   returnLoan(
-    @Param('id') id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
     @Body() dto: ReturnLoanDto,
     @CurrentUser() user: { id: string },
   ) {
@@ -36,7 +45,10 @@ export class LoansController {
   })
   @Roles(UserRole.MEMBER, UserRole.LIBRARIAN, UserRole.ADMIN)
   @Post(':id/renew')
-  renew(@Param('id') id: string, @CurrentUser() user: { id: string; role: UserRole }) {
+  renew(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @CurrentUser() user: { id: string; role: UserRole },
+  ) {
     return this.loans.renew(id, user);
   }
   @ApiOperation({ summary: 'List the authenticated member’s loans.' })
@@ -80,7 +92,10 @@ export class LoansController {
   })
   @Roles(UserRole.MEMBER, UserRole.LIBRARIAN, UserRole.ADMIN)
   @Get(':id')
-  detail(@Param('id') id: string, @CurrentUser() user: { id: string; role: UserRole }) {
+  detail(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @CurrentUser() user: { id: string; role: UserRole },
+  ) {
     return this.loans.detail(id, user);
   }
 }

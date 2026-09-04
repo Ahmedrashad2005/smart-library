@@ -18,6 +18,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { CatalogService } from '../catalog/catalog.service';
 import { CreateReservationDto, ReservationQueryDto } from './reservation.dto';
 import { ReservationPolicyService } from './reservation-policy.service';
+import { LoanPolicyService } from '../loans/loan-policy.service';
 
 const reservationInclude = {
   book: {
@@ -77,7 +78,69 @@ export class ReservationsService {
     private readonly prisma: PrismaService,
     private readonly policy: ReservationPolicyService,
     private readonly catalog: CatalogService,
+    private readonly loanPolicy: LoanPolicyService,
   ) {}
+
+  async staffList(query: ReservationQueryDto, page = 1, limit = 12) {
+    const take = Math.min(50, Math.max(1, limit));
+    const safePage = Math.max(1, page);
+    const where: Prisma.ReservationWhereInput = {
+      ...(query.status && query.status !== 'ALL' ? { status: query.status } : {}),
+    };
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.reservation.findMany({
+        where,
+        select: {
+          id: true, status: true, reservedAt: true, expiresAt: true, collectedAt: true,
+          book: { select: { id: true, title: true, titleAr: true, slug: true } },
+          bookCopy: { select: { id: true, copyCode: true, status: true } },
+          member: { select: { id: true, fullName: true, membershipNumber: true } },
+        },
+        orderBy: [{ reservedAt: 'desc' }, { id: 'desc' }],
+        skip: (safePage - 1) * take,
+        take,
+      }),
+      this.prisma.reservation.count({ where }),
+    ]);
+    return { items, total, page: safePage, limit: take, totalPages: Math.ceil(total / take) };
+  }
+
+  async confirmPickup(id: string, actor: Pick<User, 'id'>) {
+    return this.retry(() => this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT "id" FROM "Reservation" WHERE "id" = CAST(${id} AS uuid) FOR UPDATE`;
+      const reservation = await tx.reservation.findUnique({
+        where: { id }, include: { book: true, bookCopy: true, member: true },
+      });
+      if (!reservation) throw new NotFoundException('Reservation not found');
+      if (reservation.status !== ReservationStatus.ACTIVE)
+        throw new ConflictException('Reservation is not active');
+      const now = new Date();
+      if (reservation.expiresAt <= now) throw new ConflictException('Reservation has expired');
+      await tx.$queryRaw`SELECT "id" FROM "BookCopy" WHERE "id" = CAST(${reservation.bookCopyId} AS uuid) FOR UPDATE`;
+      const copy = await tx.bookCopy.findUniqueOrThrow({ where: { id: reservation.bookCopyId } });
+      if (copy.status !== BookCopyStatus.RESERVED)
+        throw new ConflictException('Reserved copy is not available for pickup');
+      const activeLoans = await tx.loan.count({ where: { memberId: reservation.memberId, returnedAt: null } });
+      if (activeLoans >= this.loanPolicy.maxActiveLoans)
+        throw new ConflictException('Member has reached the active loan limit');
+      const duplicate = await tx.loan.findFirst({ where: { memberId: reservation.memberId, bookCopyId: copy.id, returnedAt: null } });
+      if (duplicate) throw new ConflictException('Member already has this copy on loan');
+      await tx.bookCopy.update({ where: { id: copy.id }, data: { status: BookCopyStatus.BORROWED } });
+      await this.catalog.sync(reservation.bookId, tx);
+      const loan = await tx.loan.create({
+        data: { memberId: reservation.memberId, bookCopyId: copy.id, issuedById: actor.id, dueAt: this.loanPolicy.dueDate(now) },
+      });
+      const collected = await tx.reservation.update({
+        where: { id }, data: { status: ReservationStatus.COLLECTED, collectedAt: now },
+      });
+      await tx.auditLog.create({
+        data: { action: 'RESERVATION_PICKUP_CONFIRMED', entityType: 'reservation', entityId: id, actorId: actor.id, targetUserId: reservation.memberId,
+          oldValues: { reservationStatus: ReservationStatus.ACTIVE, copyStatus: BookCopyStatus.RESERVED },
+          newValues: { reservationStatus: ReservationStatus.COLLECTED, copyStatus: BookCopyStatus.BORROWED, loanId: loan.id } },
+      });
+      return { reservation: collected, loanId: loan.id, dueAt: loan.dueAt };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }));
+  }
 
   async create(dto: CreateReservationDto, actor: Pick<User, 'id'>) {
     try {

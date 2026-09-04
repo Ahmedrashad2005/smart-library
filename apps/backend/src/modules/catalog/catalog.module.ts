@@ -11,6 +11,7 @@ import { FacultyService } from './faculty.service';
 import { BookAssetStorageService } from './book-asset-storage.service';
 import { BookPreviewController } from './book-preview.controller';
 import { BookPreviewService } from './book-preview.service';
+import { BookCoverService } from './book-cover.service';
 @Module({
   imports: [AuditLogModule],
   controllers: [
@@ -27,6 +28,7 @@ import { BookPreviewService } from './book-preview.service';
     FacultyService,
     BookAssetStorageService,
     BookPreviewService,
+    BookCoverService,
   ],
   exports: [CatalogService],
 })

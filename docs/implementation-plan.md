@@ -59,6 +59,16 @@ Phase 1 deliberately contains no domain schema, authentication, catalog, UI flow
 
 Reservations/waiting lists, fines, payments/waivers, notifications, recommendations, reviews, reports, and dashboards are outside the approved Phase 4 scope and remain unimplemented. The centralized loan policy has no administrator settings UI yet.
 
+
+## Librarian Dashboard — Operational MVP
+
+- [x] Add a role-protected Arabic-first `/librarian` overview with real book, copy, loan, and reservation metrics.
+- [x] Reuse existing catalog, BookCopy, loan, preview, faculty, and master-data APIs and management components.
+- [x] Add librarian/admin reservation listing with safe member display fields and status filtering.
+- [x] Add atomic `POST /api/v1/reservations/:id/confirm-pickup`: ACTIVE reservation → COLLECTED reservation, BORROWED copy, and exactly one Loan, with invariant checks and audit logging.
+- [x] Keep existing loan return workflow at `/librarian/returns`; no second loan lifecycle was introduced.
+- [ ] QR scanning, pickup tickets, payments/fines UI, notifications, advanced analytics, user management, and AI librarian workflows remain intentionally out of scope.
+
 ## Phase 5 — NAWA Campus and engagement — In progress
 
 ### Phase 5.0 — Safety and product alignment
